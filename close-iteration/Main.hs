@@ -60,9 +60,11 @@ main = do
       , "- carry over points: " <> show incompleteCarryOver
       , "- carry over stories: " <> show (length incompleteStories)
       , ""
-      , "Total " <> show
+      , show
         (completedCost
         + completedCarryOver
         + (incompleteCost - incompleteCarryOver)
         )
+      <> " / "
+      <> show (completedCost + completedCarryOver + incompleteCost)
       ]
