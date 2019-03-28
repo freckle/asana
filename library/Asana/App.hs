@@ -16,6 +16,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import FrontRow.App
 import qualified FrontRow.App.Env as Env
+import LoadEnv
 import Options.Applicative
 
 data App = App
@@ -35,6 +36,7 @@ type AppM = ReaderT App (LoggingT IO)
 
 loadApp :: IO App
 loadApp = do
+  loadEnvFrom ".env.asana"
   appApiAccessKey <- Env.parse envParser
   (appProjectId, appLogLevel, appPerspective, appIgnoreNoCanDo) <-
     execParser $ info (helper <*> optParser) $ fullDesc <> progDesc

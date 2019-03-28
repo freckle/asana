@@ -38,6 +38,7 @@ library:
     - aeson-casing
     - http-conduit
     - iso8601-time
+    - load-env
     - mtl
     - optparse-applicative
     - text
