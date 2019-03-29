@@ -8,6 +8,7 @@ dependencies:
 
 default-extensions:
   - BangPatterns
+  - DataKinds
   - DeriveAnyClass
   - DeriveFoldable
   - DeriveFunctor
