@@ -22,13 +22,9 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import GHC.Generics
-import Network.HTTP.Client.Conduit
-  ( HttpExceptionContent(ConnectionTimeout, ResponseTimeout, StatusCodeException)
-  )
 import Network.HTTP.Simple
 import Text.Read (readMaybe)
 import UnliftIO.Concurrent (threadDelay)
-import UnliftIO.Exception (Exception, Handler(Handler), catches, throwIO)
 
 maxRequests :: Int
 maxRequests = 50
@@ -122,26 +118,16 @@ addAuthorization auth =
 retry :: forall a . Int -> AppM (Response a) -> AppM (Response a)
 retry attempt go
   | attempt <= 0 = go
-  | otherwise = go `catches` [Handler httpException, Handler jsonException]
+  | otherwise = handle =<< go
  where
-  httpException err@(HttpExceptionRequest _ (StatusCodeException response _)) =
-    handle err response
-  httpException (HttpExceptionRequest _ ConnectionTimeout) =
-    retry (succ attempt) go
-  httpException (HttpExceptionRequest _ ResponseTimeout) =
-    retry (succ attempt) go
-  httpException err = throwIO err
-  jsonException err@(JSONParseException _ response _) = handle err response
-  jsonException err@(JSONConversionException _ response _) =
-    handle err response
-  handle :: Exception e => e -> Response b -> AppM (Response a)
-  handle err response = if getResponseStatusCode response == 429
-    then do
+  handle :: Response a -> AppM (Response a)
+  handle response
+    | getResponseStatusCode response == 429 = do
       let seconds = getResponseDelay response
       logWarnN $ "Retrying after " <> T.pack (show seconds) <> " seconds"
-      threadDelay $ seconds * 1000000
+      threadDelay $ seconds * 100000
       retry (pred attempt) go
-    else throwIO err
+    | otherwise = pure response
 
 getResponseDelay :: Response a -> Int
 getResponseDelay =
