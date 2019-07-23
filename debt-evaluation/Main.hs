@@ -119,7 +119,22 @@ midPoints points = (xMid, yMid)
 
 toActionabilityFieldIds :: Priority -> (Integer, Maybe Integer)
 toActionabilityFieldIds = \case
-  ThankLess -> (1109768955052831, Just 1109768955052832)
-  FillIn -> (1109768955052831, Just 1109768955052833)
-  Quick -> (1109768955052831, Just 1109768955052834)
-  Major -> (1109768955052831, Just 1109768955052835)
+  ThankLess -> (actionabilityFieldId, Just thanklessEnumId)
+  FillIn -> (actionabilityFieldId, Just fillinEnumId)
+  Quick -> (actionabilityFieldId, Just quickEnumId)
+  Major -> (actionabilityFieldId, Just majorEnumId)
+
+actionabilityFieldId :: Integer
+actionabilityFieldId = 1109768955052831
+
+thanklessEnumId :: Integer
+thanklessEnumId = 1109768955052832
+
+fillinEnumId :: Integer
+fillinEnumId = 1109768955052833
+
+quickEnumId :: Integer
+quickEnumId = 1109768955052834
+
+majorEnumId :: Integer
+majorEnumId = 1109768955052835
