@@ -26,8 +26,8 @@ import GHC.Generics
 
 -- | Just what we need out of our @custom_fields@ for cost and carry-over
 data CustomField
-  = CustomNumber String (Maybe Integer)
-  | CustomEnum String (Maybe Text)
+  = CustomNumber Text (Maybe Integer)
+  | CustomEnum Text (Maybe Text)
   | Other -- ^ Unexpected types dumped here
   deriving (Eq, Generic, Show)
 

@@ -35,7 +35,7 @@ fromTask Task {..} = Story
   , sCompleted = tCompleted || awaitingDeployment
   , sCompletedAt = tCompletedAt
   , sCost = findNumber "cost" tCustomFields
-  , sImpact = findNumber "Impact" tCustomFields
+  , sImpact = findNumber "impact" tCustomFields
   , sVirality = findNumber "virality" tCustomFields
   , sCarryOver = findNumber "carryover" tCustomFields
   , sCanDo = findYesNo "can do?" tCustomFields
@@ -45,22 +45,25 @@ fromTask Task {..} = Story
  where
   awaitingDeployment = flip any tMemberships $ \Membership {..} ->
     case mSection of
-      Just Named {..} | nName == "Awaiting Deployment" -> True
+      Just Named {..} | caseFoldEq nName "Awaiting Deployment" -> True
       _ -> False
 
-findNumber :: String -> [CustomField] -> Maybe Integer
+findNumber :: Text -> [CustomField] -> Maybe Integer
 findNumber field = listToMaybe . mapMaybe cost
  where
   cost = \case
-    (CustomNumber foundField mn) | field == foundField -> mn
+    (CustomNumber foundField mn) | caseFoldEq field foundField -> mn
     _ -> Nothing
 
-findYesNo :: String -> [CustomField] -> Maybe Bool
+findYesNo :: Text -> [CustomField] -> Maybe Bool
 findYesNo x = fmap parse . listToMaybe . mapMaybe go
  where
-  go (CustomEnum name mn) | name == x = mn
+  go (CustomEnum name mn) | caseFoldEq name x = mn
   go _ = Nothing
   parse = (== "Yes")
+
+caseFoldEq :: Text -> Text -> Bool
+caseFoldEq x y = T.toCaseFold x == T.toCaseFold y
 
 storyUrl :: Text -> Story -> Text
 storyUrl projectId Story {..} =
