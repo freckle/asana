@@ -92,6 +92,11 @@ get path params limit mOffset = do
     <> maybe "" ("&offset=" <>) mOffset
     <> concatMap (\(k, v) -> "&" <> k <> "=" <> v) params
   response <- retry 10 $ httpJSON (addAuthorization auth request)
+  when (300 <= getResponseStatusCode response)
+    . logWarnN
+    . T.pack
+    $ "GET failed "
+    <> show (getResponseStatusCode response)
   pure $ getResponseBody response
 
 put :: ToJSON a => String -> a -> AppM ()
@@ -99,11 +104,16 @@ put path payload = do
   auth <- asks appApiAccessKey
   request <- parseRequest $ "https://app.asana.com/api/1.0" <> path
 
-  void . retry 10 $ httpNoBody
+  response <- retry 10 $ httpNoBody
     (setRequestMethod "PUT" . setRequestBodyJSON payload $ addAuthorization
       auth
       request
     )
+  when (300 <= getResponseStatusCode response)
+    . logWarnN
+    . T.pack
+    $ "PUT failed "
+    <> show (getResponseStatusCode response)
 
 addAuthorization :: Text -> Request -> Request
 addAuthorization auth =

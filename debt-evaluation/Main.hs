@@ -65,6 +65,7 @@ main = do
   runApp app $ do
     projectId <- asks appProjectId
 
+    logDebugN "Fetch stories"
     tasks <- getProjectTasks projectId IncompletedTasks
     stories <- pooledForConcurrentlyN maxRequests tasks $ \Named {..} -> do
       story <- fromTask <$> getTask nId
@@ -72,6 +73,7 @@ main = do
       logInfoN $ url <> " " <> sName story
       pure story
 
+    logDebugN "Calculate points"
     let
       points = flip mapMaybe stories $ \story@Story {..} -> do
         guard $ not sCompleted
@@ -91,6 +93,9 @@ main = do
         | pImpact <= yMid && pEffort < xMid = FillIn
         | otherwise = ThankLess
 
+    when (null points) $ logWarnN "No stories with points"
+
+    logDebugN "Label actionability"
     pooledForConcurrentlyN_ maxRequests points $ \point@Point {..} -> do
       let actionability = toActionability point
       putEnumField (fromIntegral pId) $ toActionabilityFieldIds actionability
