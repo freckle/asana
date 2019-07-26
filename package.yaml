@@ -36,6 +36,9 @@ library:
   dependencies:
     - aeson
     - aeson-casing
+    - ansi-terminal
+    - bytestring
+    - fast-logger
     - http-conduit
     - iso8601-time
     - load-env
