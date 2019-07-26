@@ -26,10 +26,10 @@ import Prelude
 import Asana.Api
 import Asana.App
 import Asana.Story
+import Control.Monad (guard, when)
 import Control.Monad.Logger
 import Data.Maybe (mapMaybe)
 import Data.Text (Text, pack)
-import FrontRow.App
 import Text.Printf (printf)
 import UnliftIO.Async (pooledForConcurrentlyN, pooledForConcurrentlyN_)
 

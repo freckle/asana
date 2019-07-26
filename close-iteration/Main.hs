@@ -10,7 +10,6 @@ import Control.Monad.Logger
 import Data.List (partition)
 import Data.Maybe (isJust, isNothing, mapMaybe)
 import Data.Semigroup ((<>))
-import FrontRow.App
 import UnliftIO.Async (pooledForConcurrentlyN)
 
 main :: IO ()

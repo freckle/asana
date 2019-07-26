@@ -6,18 +6,34 @@ module Asana.App
   , AppM
   , Perspective(..)
   , loadApp
+  , runApp
+  , asks
+  , liftIO
   ) where
 
 import Prelude
 
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger
+import Control.Monad.Trans.Reader (ReaderT, asks, runReaderT)
 import Data.Semigroup ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
-import FrontRow.App
-import qualified FrontRow.App.Env as Env
 import LoadEnv
 import Options.Applicative
+  ( Parser
+  , execParser
+  , flag
+  , fullDesc
+  , help
+  , helper
+  , info
+  , long
+  , progDesc
+  , strOption
+  )
+import System.Environment (getEnv)
+import System.IO (BufferMode(..), hSetBuffering, stderr, stdout)
 
 data App = App
   { appProjectId :: Text
@@ -29,23 +45,27 @@ data App = App
 
 data Perspective = Pessimistic | Optimistic
 
-instance HasLogLevel App where
-  getLogLevel = appLogLevel
-
 type AppM = ReaderT App (LoggingT IO)
+
+runApp :: App -> AppM a -> IO a
+runApp app action = do
+  -- Ensure output is streamed if in a Docker container
+  hSetBuffering stdout LineBuffering
+  hSetBuffering stderr LineBuffering
+
+  runStderrLoggingT
+    $ filterLogger (\_ level -> level >= appLogLevel app)
+    $ runReaderT action app
 
 loadApp :: IO App
 loadApp = do
   loadEnvFrom ".env.asana"
-  appApiAccessKey <- Env.parse envParser
+  appApiAccessKey <- T.pack <$> getEnv "ASANA_API_KEY"
   (appProjectId, appLogLevel, appPerspective, appIgnoreNoCanDo) <-
     execParser $ info (helper <*> optParser) $ fullDesc <> progDesc
       "Report information about an iteration project"
   pure App {..}
  where
-  envParser :: Env.Parser Text
-  envParser = Env.var Env.str "ASANA_API_KEY" Env.nonEmpty
-
   optParser :: Parser (Text, LogLevel, Perspective, Bool)
   optParser =
     (,,,)

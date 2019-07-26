@@ -12,8 +12,8 @@ module Asana.Api.Request
 import Prelude
 
 import Asana.App
+import Control.Monad (when)
 import Control.Monad.Logger (logWarnN)
-import Control.Monad.Reader
 import Data.Aeson
 import Data.Aeson.Casing
 import Data.Maybe (fromMaybe)

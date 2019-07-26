@@ -3,7 +3,6 @@ name: asana
 
 dependencies:
   - base
-  - frontrow-app
   - monad-logger
 
 default-extensions:
@@ -44,6 +43,7 @@ library:
     - optparse-applicative
     - text
     - time
+    - transformers
     - unliftio
 
 executables:

@@ -5,11 +5,12 @@ import Prelude
 import Asana.Api
 import Asana.App
 import Asana.Story
+import Control.Monad (foldM, when)
+import Control.Monad.Logger (logWarnN)
 import Data.Maybe (isNothing)
 import Data.Semigroup.Generic (gmappend, gmempty)
 import Data.Text (pack)
 import Data.Time
-import FrontRow.App
 import GHC.Generics
 
 data Totals = Totals
