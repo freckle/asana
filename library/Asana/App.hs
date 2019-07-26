@@ -13,6 +13,7 @@ module Asana.App
 
 import Prelude
 
+import Asana.Logger (runANSILoggerT)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger
 import Control.Monad.Trans.Reader (ReaderT, asks, runReaderT)
@@ -53,7 +54,7 @@ runApp app action = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stderr LineBuffering
 
-  runStderrLoggingT
+  runANSILoggerT
     $ filterLogger (\_ level -> level >= appLogLevel app)
     $ runReaderT action app
 
