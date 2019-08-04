@@ -9,22 +9,19 @@ module Asana.Api.Request
   , maxRequests
   ) where
 
-import Prelude
+import RIO
 
 import Asana.App
 import Control.Monad (when)
-import Control.Monad.Logger (logWarnN)
 import Data.Aeson
 import Data.Aeson.Casing
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import GHC.Generics
 import Network.HTTP.Simple
+import Prelude (pred)
+import RIO.Text (Text)
+import qualified RIO.Text as T
 import Text.Read (readMaybe)
-import UnliftIO.Concurrent (threadDelay)
 
 maxRequests :: Int
 maxRequests = 50
@@ -89,10 +86,9 @@ get path params limit mOffset = do
     <> concatMap (\(k, v) -> "&" <> k <> "=" <> v) params
   response <- retry 10 $ httpJSON (addAuthorization auth request)
   when (300 <= getResponseStatusCode response)
-    . logWarnN
-    . T.pack
+    . logWarn
     $ "GET failed "
-    <> show (getResponseStatusCode response)
+    <> display (getResponseStatusCode response)
   pure $ getResponseBody response
 
 put :: ToJSON a => String -> a -> AppM ()
@@ -106,30 +102,33 @@ put path payload = do
       request
     )
   when (300 <= getResponseStatusCode response)
-    . logWarnN
-    . T.pack
+    . logWarn
     $ "PUT failed "
-    <> show (getResponseStatusCode response)
+    <> display (getResponseStatusCode response)
 
 addAuthorization :: Text -> Request -> Request
 addAuthorization auth =
-  addRequestHeader "Authorization" $ "Bearer " <> encodeUtf8 auth
+  addRequestHeader "Authorization" $ "Bearer " <> T.encodeUtf8 auth
 
 retry :: forall a . Int -> AppM (Response a) -> AppM (Response a)
 retry attempt go
   | attempt <= 0 = go
-  | otherwise = handle =<< go
+  | otherwise = handler =<< go
  where
-  handle :: Response a -> AppM (Response a)
-  handle response
+  handler :: Response a -> AppM (Response a)
+  handler response
     | getResponseStatusCode response == 429 = do
       let seconds = getResponseDelay response
-      logWarnN $ "Retrying after " <> T.pack (show seconds) <> " seconds"
+      logWarn $ "Retrying after " <> display seconds <> " seconds"
       threadDelay $ seconds * 100000
       retry (pred attempt) go
     | otherwise = pure response
 
 getResponseDelay :: Response a -> Int
 getResponseDelay =
-  fromMaybe 0 . readMaybe . T.unpack . decodeUtf8 . mconcat . getResponseHeader
-    "Retry-After"
+  fromMaybe 0
+    . readMaybe
+    . T.unpack
+    . T.decodeUtf8With T.lenientDecode
+    . mconcat
+    . getResponseHeader "Retry-After"

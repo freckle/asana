@@ -1,16 +1,14 @@
 module Main (main) where
 
-import Prelude
+import RIO
 
 import Asana.Api
 import Asana.App
 import Asana.Story
 import Control.Monad (unless, when)
-import Control.Monad.Logger
-import Data.List (partition)
+import Data.List (partition, tail, zipWith)
 import Data.Maybe (fromMaybe, isJust, isNothing, mapMaybe)
 import Data.Semigroup ((<>))
-import UnliftIO.Async (pooledForConcurrentlyN)
 
 main :: IO ()
 main = do
@@ -25,17 +23,27 @@ main = do
       $ \Named {..} -> do
           story@Story {..} <- fromTask <$> getTask nId
           let url = "<" <> storyUrl projectId story <> ">"
-          logInfoN $ url <> " " <> sName
-          when sCompleted . logWarnN $ "Completed story in iteration: " <> url
+          logInfo . display $ url <> " " <> sName
+          when sCompleted
+            . logWarn
+            $ "Completed story in iteration: "
+            <> display url
           case sCanDo of
-            Nothing -> logWarnN $ "Story does not have a \"can do?\": " <> url
+            Nothing ->
+              logWarn $ "Story does not have a \"can do?\": " <> display url
             Just canDo ->
-              unless canDo . logWarnN $ "Story marked as can't do: " <> url
+              unless canDo
+                . logWarn
+                $ "Story marked as can't do: "
+                <> display url
           unless (maybe True isFib sCost)
-            . logWarnN
+            . logWarn
             $ "Story's cost is not a Fibonacci number: "
-            <> url
-          when (isNothing sCost) . logWarnN $ "Story is not costed: " <> url
+            <> display url
+          when (isNothing sCost)
+            . logWarn
+            $ "Story is not costed: "
+            <> display url
           pure story
 
     let
@@ -45,16 +53,21 @@ main = do
       iterationNum = length iterationStories
       carriedCost = sum $ mapMaybe sCarryOver carriedStories
       carriedNum = length carriedStories
-    liftIO $ putStrLn $ unlines
+    hPutBuilder stdout . getUtf8Builder $ foldMap
+      ("\n" <>)
       [ "New Story Points"
-      , "  " <> show iterationCost <> " (" <> show iterationNum <> " stories)"
+      , "  "
+      <> display iterationCost
+      <> " ("
+      <> display iterationNum
+      <> " stories)"
       , "Carryover Story Points"
-      , "  " <> show carriedCost <> " (" <> show carriedNum <> " stories)"
+      , "  " <> display carriedCost <> " (" <> display carriedNum <> " stories)"
       , "Total"
       , "  "
-      <> show (iterationCost + carriedCost)
+      <> display (iterationCost + carriedCost)
       <> " ("
-      <> show (iterationNum + carriedNum)
+      <> display (iterationNum + carriedNum)
       <> " stories)"
       ]
 

@@ -4,14 +4,14 @@ module Asana.Story
   , storyUrl
   ) where
 
-import Prelude
+import RIO
 
 import Asana.Api
 import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Semigroup ((<>))
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Time
+import RIO.Text (Text)
+import qualified RIO.Text as T
+import RIO.Time
 
 data Story = Story
   { sAssignee :: Maybe Named
