@@ -21,17 +21,16 @@
 --
 module Main (main) where
 
-import Prelude
+import RIO
 
 import Asana.Api
 import Asana.App
 import Asana.Story
 import Control.Monad (guard, when)
-import Control.Monad.Logger
+import Data.Foldable (maximum, minimum)
 import Data.Maybe (mapMaybe)
-import Data.Text (Text, pack)
+import RIO.Text (Text)
 import Text.Printf (printf)
-import UnliftIO.Async (pooledForConcurrentlyN, pooledForConcurrentlyN_)
 
 data Point = Point
   { pId :: Int
@@ -65,15 +64,15 @@ main = do
   runApp app $ do
     projectId <- asks appProjectId
 
-    logDebugN "Fetch stories"
+    logDebug "Fetch stories"
     tasks <- getProjectTasks projectId IncompletedTasks
     stories <- pooledForConcurrentlyN maxRequests tasks $ \Named {..} -> do
       story <- fromTask <$> getTask nId
       let url = "<" <> storyUrl projectId story <> ">"
-      logInfoN $ url <> " " <> sName story
+      logInfo . display $ url <> " " <> sName story
       pure story
 
-    logDebugN "Calculate points"
+    logDebug "Calculate points"
     let
       points = flip mapMaybe stories $ \story@Story {..} -> do
         guard $ not sCompleted
@@ -93,13 +92,13 @@ main = do
         | pImpact <= yMid && pEffort < xMid = FillIn
         | otherwise = ThankLess
 
-    when (null points) $ logWarnN "No stories with points"
+    when (null points) $ logWarn "No stories with points"
 
-    logDebugN "Label actionability"
+    logDebug "Label actionability"
     pooledForConcurrentlyN_ maxRequests points $ \point@Point {..} -> do
       let actionability = toActionability point
       putEnumField (fromIntegral pId) $ toActionabilityFieldIds actionability
-      logInfoN . pack $ printf
+      logInfo . fromString $ printf
         "Updated actionability %s %s: %s (%.2fc/%.2fi)"
         pUrl
         pName

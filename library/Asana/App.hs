@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -7,19 +8,13 @@ module Asana.App
   , Perspective(..)
   , loadApp
   , runApp
-  , asks
   , liftIO
   ) where
 
-import Prelude
+import RIO
 
-import Asana.Logger (runANSILoggerT)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Logger
-import Control.Monad.Trans.Reader (ReaderT, asks, runReaderT)
 import Data.Semigroup ((<>))
-import Data.Text (Text)
-import qualified Data.Text as T
 import LoadEnv
 import Options.Applicative
   ( Parser
@@ -33,8 +28,10 @@ import Options.Applicative
   , progDesc
   , strOption
   )
+import RIO.Text (Text)
+import qualified RIO.Text as T
 import System.Environment (getEnv)
-import System.IO (BufferMode(..), hSetBuffering, stderr, stdout)
+import System.IO (stderr)
 
 data App = App
   { appProjectId :: Text
@@ -42,21 +39,26 @@ data App = App
   , appLogLevel :: LogLevel
   , appPerspective :: Perspective
   , appIgnoreNoCanDo :: Bool
+  , logFunc :: LogFunc
   }
+
+instance HasLogFunc App where
+  logFuncL = lens logFunc (\app logFunc -> app {logFunc})
 
 data Perspective = Pessimistic | Optimistic
 
-type AppM = ReaderT App (LoggingT IO)
+type AppM = RIO App
 
 runApp :: App -> AppM a -> IO a
 runApp app action = do
-  -- Ensure output is streamed if in a Docker container
-  hSetBuffering stdout LineBuffering
-  hSetBuffering stderr LineBuffering
-
-  runANSILoggerT
-    $ filterLogger (\_ level -> level >= appLogLevel app)
-    $ runReaderT action app
+  logOptions <-
+    setLogUseLoc False
+    . setLogUseTime False
+    . setLogMinLevel (appLogLevel app)
+    <$> logOptionsHandle stderr True
+  withLogFunc logOptions $ \logFunc -> runRIO app { logFunc } $ do
+    logInfo "Starting app"
+    action
 
 loadApp :: IO App
 loadApp = do
@@ -65,6 +67,7 @@ loadApp = do
   (appProjectId, appLogLevel, appPerspective, appIgnoreNoCanDo) <-
     execParser $ info (helper <*> optParser) $ fullDesc <> progDesc
       "Report information about an iteration project"
+  let logFunc = error "not initialized"
   pure App {..}
  where
   optParser :: Parser (Text, LogLevel, Perspective, Bool)

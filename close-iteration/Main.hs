@@ -1,16 +1,14 @@
 module Main (main) where
 
-import Prelude
+import RIO
 
 import Asana.Api
 import Asana.App
 import Asana.Story
 import Control.Monad (when)
-import Control.Monad.Logger
 import Data.List (partition)
 import Data.Maybe (isJust, isNothing, mapMaybe)
 import Data.Semigroup ((<>))
-import UnliftIO.Async (pooledForConcurrentlyN)
 
 main :: IO ()
 main = do
@@ -23,13 +21,13 @@ main = do
     stories <- pooledForConcurrentlyN maxRequests tasks $ \Named {..} -> do
       story@Story {..} <- fromTask <$> getTask nId
       let url = "<" <> storyUrl projectId story <> ">"
-      logInfoN $ url <> " " <> sName
+      logInfo . display $ url <> " " <> sName
 
       let incompleteNoCarry = not sCompleted && isNothing sCarryOver
       when incompleteNoCarry
-        $ logWarnN
+        $ logWarn
         $ "No carry over on incomplete story: "
-        <> url
+        <> display url
 
       pure $ case (incompleteNoCarry, perspective) of
         (True, Pessimistic) -> story { sCarryOver = sCost }
@@ -48,22 +46,23 @@ main = do
       incompleteCost = sum $ mapMaybe sCost incompleteStories
       incompleteCarryOver = sum $ mapMaybe sCarryOver incompleteStories
 
-    liftIO $ putStrLn $ unlines
+    hPutBuilder stdout . getUtf8Builder $ foldMap
+      ("\n" <>)
       [ "Completed"
-      , "- new points: " <> show completedCost
-      , "- carried over points: " <> show completedCarryOver
-      , "- new stories: " <> show (length completedStories)
-      , "- carried over stories: " <> show (length carriedStories)
+      , "- new points: " <> display completedCost
+      , "- carried over points: " <> display completedCarryOver
+      , "- new stories: " <> display (length completedStories)
+      , "- carried over stories: " <> display (length carriedStories)
       , "Incomplete"
-      , "- points completed: " <> show (incompleteCost - incompleteCarryOver)
-      , "- carry over points: " <> show incompleteCarryOver
-      , "- carry over stories: " <> show (length incompleteStories)
+      , "- points completed: " <> display (incompleteCost - incompleteCarryOver)
+      , "- carry over points: " <> display incompleteCarryOver
+      , "- carry over stories: " <> display (length incompleteStories)
       , ""
-      , show
+      , display
         (completedCost
         + completedCarryOver
         + (incompleteCost - incompleteCarryOver)
         )
       <> " / "
-      <> show (completedCost + completedCarryOver + incompleteCost)
+      <> display (completedCost + completedCarryOver + incompleteCost)
       ]

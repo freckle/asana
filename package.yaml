@@ -3,7 +3,6 @@ name: asana
 
 dependencies:
   - base
-  - monad-logger
 
 default-extensions:
   - BangPatterns
@@ -36,17 +35,10 @@ library:
   dependencies:
     - aeson
     - aeson-casing
-    - ansi-terminal
-    - bytestring
-    - fast-logger
     - http-conduit
-    - iso8601-time
     - load-env
     - optparse-applicative
-    - text
-    - time
-    - transformers
-    - unliftio
+    - rio
 
 executables:
   bug-reproduction:
@@ -54,25 +46,23 @@ executables:
     source-dirs: bug-reproduction
     dependencies:
       - asana
+      - rio
       - semigroups
-      - text
-      - time
   close-iteration:
     main: Main.hs
     source-dirs: close-iteration
     dependencies:
       - asana
-      - unliftio
+      - rio
   start-iteration:
     main: Main.hs
     source-dirs: start-iteration
     dependencies:
       - asana
-      - unliftio
+      - rio
   debt-evaluation:
     main: Main.hs
     source-dirs: debt-evaluation
     dependencies:
       - asana
-      - text
-      - unliftio
+      - rio

@@ -3,12 +3,11 @@ module Asana.Api.Named
     ( Named(..)
     ) where
 
-import Prelude
+import RIO
 
 import Data.Aeson
 import Data.Aeson.Casing
-import Data.Text (Text)
-import GHC.Generics
+import RIO.Text (Text)
 
 data Named = Named
   { nId :: Integer

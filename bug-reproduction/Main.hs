@@ -1,24 +1,21 @@
 module Main (main) where
 
-import Prelude
+import RIO
 
 import Asana.Api
 import Asana.App
 import Asana.Story
 import Control.Monad (foldM, when)
-import Control.Monad.Logger (logWarnN)
 import Data.Maybe (isNothing)
 import Data.Semigroup.Generic (gmappend, gmempty)
-import Data.Text (pack)
-import Data.Time
-import GHC.Generics
+import RIO.Time
 
 data Totals = Totals
   { tUnknown :: [Story]
   , tReproduced :: [Story]
   , tNotReproduced :: [Story]
   }
-  deriving (Show, Generic)
+  deriving (Generic)
 
 instance Semigroup Totals where
   (<>) = gmappend
@@ -49,10 +46,11 @@ main = do
           -- Only report assigned tasks; a cheap way to avoid non-bugs that were
           -- marked completed to make them go away.
           Just assignee | sCompleted -> do
-            when (isNothing sReproduced) $ logWarnN $ pack $ unlines
-              [ "Story " <> show sName
-              , " by " <> show (nName assignee)
-              , " completed " <> show sCompletedAt
+            when (isNothing sReproduced) $ logWarn $ foldMap
+              ("\n" <>)
+              [ "Story " <> display sName
+              , " by " <> display (nName assignee)
+              , " completed " <> displayShow sCompletedAt
               , " lacks reproduced information"
               ]
             pure $ toTotals story
@@ -61,8 +59,9 @@ main = do
         pure $ totals <> storyTotals
 
     totals <- foldM accumulateStory mempty tasks
-    liftIO $ putStrLn $ unlines
-      [ "Unknown: " <> show (length $ tUnknown totals)
-      , "Reproduced: " <> show (length $ tReproduced totals)
-      , "Not reproduced: " <> show (length $ tNotReproduced totals)
+    hPutBuilder stdout . getUtf8Builder $ foldMap
+      ("\n" <>)
+      [ "Unknown: " <> display (length $ tUnknown totals)
+      , "Reproduced: " <> display (length $ tReproduced totals)
+      , "Not reproduced: " <> display (length $ tNotReproduced totals)
       ]

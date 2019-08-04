@@ -9,7 +9,7 @@ module Asana.Api.Task
   , putEnumField
   ) where
 
-import Prelude
+import RIO
 
 import Asana.Api.Named
 import Asana.Api.Request
@@ -18,11 +18,9 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
 import Data.Aeson.Casing
 import Data.Semigroup ((<>))
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Time
-import Data.Time.ISO8601 (formatISO8601)
-import GHC.Generics
+import RIO.Text (Text)
+import qualified RIO.Text as T
+import RIO.Time
 
 -- | Just what we need out of our @custom_fields@ for cost and carry-over
 data CustomField
@@ -93,6 +91,9 @@ getProjectTasks projectId taskStatusFilter = do
     AllTasks -> []
     IncompletedTasks -> [("completed_since", formatISO8601 now)]
 
+formatISO8601 :: FormatTime t => t -> String
+formatISO8601 = formatTime defaultTimeLocale (iso8601DateFormat Nothing)
+
 data TaskStatusFilter = IncompletedTasks | AllTasks
 
 getProjectTasksCompletedSince :: Text -> UTCTime -> AppM [Named]
@@ -105,4 +106,3 @@ putEnumField taskId (fieldId, enumId) = put ("/tasks/" <> show taskId) $ object
   [ "data"
       .= object ["custom_fields" .= object [tshow fieldId .= toJSON enumId]]
   ]
-  where tshow = T.pack . show
