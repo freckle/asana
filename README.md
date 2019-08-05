@@ -14,6 +14,14 @@ stack build
 stack exec -- <tool> --project <project-id>
 ```
 
+### ENV
+
+You can persist your API key in `~/.env.asana` if you'd rather not set it on each run.
+
+```
+echo "ASANA_API_KEY=<access-token>" >> ~/.env.asana
+```
+
 ## Tools
 
 ### `start-iteration`
