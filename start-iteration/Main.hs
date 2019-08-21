@@ -36,7 +36,7 @@ main = do
       when (isNothing sCost) . logWarn $ "Story is not costed: " <> display url
       case sAssignee of
         Nothing -> do
-          logWarn $ "Story's has no assignee: " <> display url
+          logWarn $ "Story has no assignee: " <> display url
           pure Nothing
         Just _ -> mayCanDo story
 
