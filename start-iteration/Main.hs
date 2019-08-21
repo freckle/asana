@@ -7,7 +7,7 @@ import Asana.App
 import Asana.Story
 import Control.Monad (unless, when)
 import Data.List (partition, tail, zipWith)
-import Data.Maybe (fromMaybe, isJust, isNothing, mapMaybe)
+import Data.Maybe (isJust, isNothing, mapMaybe)
 import Data.Semigroup ((<>))
 
 main :: IO ()
@@ -17,34 +17,28 @@ main = do
     projectId <- asks appProjectId
     tasks <- getProjectTasks projectId AllTasks
 
-    stories <-
-      fmap (filterNoCanDo (appIgnoreNoCanDo app))
-      . pooledForConcurrentlyN maxRequests tasks
-      $ \Named {..} -> do
-          story@Story {..} <- fromTask <$> getTask nId
-          let url = "<" <> storyUrl projectId story <> ">"
-          logInfo . display $ url <> " " <> sName
-          when sCompleted
-            . logWarn
-            $ "Completed story in iteration: "
-            <> display url
-          case sCanDo of
-            Nothing ->
-              logWarn $ "Story does not have a \"can do?\": " <> display url
-            Just canDo ->
-              unless canDo
-                . logWarn
-                $ "Story marked as can't do: "
-                <> display url
-          unless (maybe True isFib sCost)
-            . logWarn
-            $ "Story's cost is not a Fibonacci number: "
-            <> display url
-          when (isNothing sCost)
-            . logWarn
-            $ "Story is not costed: "
-            <> display url
-          pure story
+    let
+      processStories =
+        fmap catMaybes . pooledForConcurrentlyN maxRequests tasks
+
+    stories <- processStories $ \Named {..} -> do
+      story@Story {..} <- fromTask <$> getTask nId
+      let url = "<" <> storyUrl projectId story <> ">"
+      logInfo . display $ url <> " " <> sName
+      when sCompleted
+        . logWarn
+        $ "Completed story in iteration: "
+        <> display url
+      unless (maybe True isFib sCost)
+        . logWarn
+        $ "Story's cost is not a Fibonacci number: "
+        <> display url
+      when (isNothing sCost) . logWarn $ "Story is not costed: " <> display url
+      case sAssignee of
+        Nothing -> do
+          logWarn $ "Story's has no assignee: " <> display url
+          pure Nothing
+        Just _ -> mayCanDo story
 
     let
       isCarried = isJust . sCarryOver
@@ -71,9 +65,21 @@ main = do
       <> " stories)"
       ]
 
-filterNoCanDo :: Bool -> [Story] -> [Story]
-filterNoCanDo False = id
-filterNoCanDo True = filter (fromMaybe False . sCanDo)
+makeUrl :: Text -> Story -> Text
+makeUrl projectId story = "<" <> storyUrl projectId story <> ">"
+
+mayCanDo :: Story -> AppM (Maybe Story)
+mayCanDo story = do
+  projectId <- asks appProjectId
+  let url = makeUrl projectId story
+  case sCanDo story of
+    Nothing -> do
+      logWarn $ "Story does not have a \"can do?\": " <> display url
+      ignoreNoCanDo <- asks appIgnoreNoCanDo
+      pure $ if ignoreNoCanDo then Nothing else Just story
+    Just canDo -> do
+      unless canDo . logWarn $ "Story marked as can't do: " <> display url
+      pure $ Just story
 
 fibs :: [Integer]
 fibs = 0 : 1 : zipWith (+) fibs (tail fibs)
