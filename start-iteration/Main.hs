@@ -6,6 +6,7 @@ import Asana.Api
 import Asana.App
 import Asana.Story
 import Control.Monad (unless, when)
+import Control.Monad.Trans.Maybe (MaybeT(MaybeT), runMaybeT)
 import Data.List (partition, tail, zipWith)
 import Data.Maybe (isJust, isNothing, mapMaybe)
 import Data.Semigroup ((<>))
@@ -21,24 +22,28 @@ main = do
       processStories =
         fmap catMaybes . pooledForConcurrentlyN maxRequests tasks
 
-    stories <- processStories $ \Named {..} -> do
-      story@Story {..} <- fromTask <$> getTask nId
+    stories <- processStories $ \Named {..} -> runMaybeT $ do
+      story@Story {..} <- MaybeT $ fromTask <$> getTask nId
       let url = "<" <> storyUrl projectId story <> ">"
-      logInfo . display $ url <> " " <> sName
-      when sCompleted
-        . logWarn
-        $ "Completed story in iteration: "
-        <> display url
-      unless (maybe True isFib sCost)
-        . logWarn
-        $ "Story's cost is not a Fibonacci number: "
-        <> display url
-      when (isNothing sCost) . logWarn $ "Story is not costed: " <> display url
-      case sAssignee of
-        Nothing -> do
-          logWarn $ "Story has no assignee: " <> display url
-          pure Nothing
-        Just _ -> mayCanDo story
+      MaybeT $ do
+        logInfo . display $ url <> " " <> sName
+        when sCompleted
+          . logWarn
+          $ "Completed story in iteration: "
+          <> display url
+        unless (maybe True isFib sCost)
+          . logWarn
+          $ "Story's cost is not a Fibonacci number: "
+          <> display url
+        when (isNothing sCost)
+          . logWarn
+          $ "Story is not costed: "
+          <> display url
+        case sAssignee of
+          Nothing -> do
+            logWarn $ "Story has no assignee: " <> display url
+            pure Nothing
+          Just _ -> mayCanDo story
 
     let
       isCarried = isJust . sCarryOver

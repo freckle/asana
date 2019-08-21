@@ -28,20 +28,23 @@ data Story = Story
   }
   deriving Show
 
-fromTask :: Task -> Story
-fromTask Task {..} = Story
-  { sAssignee = tAssignee
-  , sName = tName
-  , sCompleted = tCompleted || awaitingDeployment
-  , sCompletedAt = tCompletedAt
-  , sCost = findNumber "cost" tCustomFields
-  , sImpact = findNumber "impact" tCustomFields
-  , sVirality = findNumber "virality" tCustomFields
-  , sCarryOver = findNumber "carryover" tCustomFields
-  , sCanDo = findYesNo "can do?" tCustomFields
-  , sReproduced = findYesNo "Reproduces on seed data?" tCustomFields
-  , sId = tId
-  }
+fromTask :: Task -> Maybe Story
+fromTask Task {..} = case tResourceSubtype of
+  Milestone -> Nothing
+  Section -> Nothing
+  DefaultTask -> Just $ Story
+    { sAssignee = tAssignee
+    , sName = tName
+    , sCompleted = tCompleted || awaitingDeployment
+    , sCompletedAt = tCompletedAt
+    , sCost = findNumber "cost" tCustomFields
+    , sImpact = findNumber "impact" tCustomFields
+    , sVirality = findNumber "virality" tCustomFields
+    , sCarryOver = findNumber "carryover" tCustomFields
+    , sCanDo = findYesNo "can do?" tCustomFields
+    , sReproduced = findYesNo "Reproduces on seed data?" tCustomFields
+    , sId = tId
+    }
  where
   awaitingDeployment = flip any tMemberships $ \Membership {..} ->
     case mSection of
