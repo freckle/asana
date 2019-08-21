@@ -60,6 +60,7 @@ executables:
     dependencies:
       - asana
       - rio
+      - transformers
   debt-evaluation:
     main: Main.hs
     source-dirs: debt-evaluation

@@ -66,11 +66,15 @@ main = do
 
     logDebug "Fetch stories"
     tasks <- getProjectTasks projectId IncompletedTasks
-    stories <- pooledForConcurrentlyN maxRequests tasks $ \Named {..} -> do
-      story <- fromTask <$> getTask nId
-      let url = "<" <> storyUrl projectId story <> ">"
-      logInfo . display $ url <> " " <> sName story
-      pure story
+    let
+      processStories =
+        fmap catMaybes . pooledForConcurrentlyN maxRequests tasks
+    stories <- processStories $ \Named {..} -> do
+      mStory <- fromTask <$> getTask nId
+      for mStory $ \story -> do
+        let url = "<" <> storyUrl projectId story <> ">"
+        logInfo . display $ url <> " " <> sName story
+        pure story
 
     logDebug "Calculate points"
     let

@@ -41,22 +41,25 @@ main = do
     let
       accumulateStory :: Totals -> Named -> AppM Totals
       accumulateStory totals named = do
-        story@Story {..} <- fromTask <$> getTask (nId named)
-        storyTotals <- case sAssignee of
-          -- Only report assigned tasks; a cheap way to avoid non-bugs that were
-          -- marked completed to make them go away.
-          Just assignee | sCompleted -> do
-            when (isNothing sReproduced) $ logWarn $ foldMap
-              ("\n" <>)
-              [ "Story " <> display sName
-              , " by " <> display (nName assignee)
-              , " completed " <> displayShow sCompletedAt
-              , " lacks reproduced information"
-              ]
-            pure $ toTotals story
-          _ -> pure mempty
+        mStory <- fromTask <$> getTask (nId named)
+        case mStory of
+          Nothing -> pure mempty
+          Just story@Story {..} -> do
+            storyTotals <- case sAssignee of
+              -- Only report assigned tasks; a cheap way to avoid non-bugs that were
+              -- marked completed to make them go away.
+              Just assignee | sCompleted -> do
+                when (isNothing sReproduced) $ logWarn $ foldMap
+                  ("\n" <>)
+                  [ "Story " <> display sName
+                  , " by " <> display (nName assignee)
+                  , " completed " <> displayShow sCompletedAt
+                  , " lacks reproduced information"
+                  ]
+                pure $ toTotals story
+              _ -> pure mempty
 
-        pure $ totals <> storyTotals
+            pure $ totals <> storyTotals
 
     totals <- foldM accumulateStory mempty tasks
     hPutBuilder stdout . getUtf8Builder $ foldMap

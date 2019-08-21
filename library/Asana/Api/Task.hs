@@ -3,6 +3,7 @@ module Asana.Api.Task
   , CustomField(..)
   , Membership(..)
   , TaskStatusFilter(..)
+  , ResourceSubtype(..)
   , getTask
   , getProjectTasks
   , getProjectTasksCompletedSince
@@ -34,16 +35,12 @@ instance FromJSON CustomField where
     oType <- o .: "type"
 
     case (oType :: Text) of
-      "number" -> CustomNumber
-        <$> o .: "name"
-        <*> o .: "number_value"
+      "number" -> CustomNumber <$> o .: "name" <*> o .: "number_value"
       "enum" -> do
         value <- o .: "enum_value"
-        CustomEnum
-          <$> o .: "name"
-          <*> case value of
-            Object vo -> vo .:? "name"
-            _ -> pure Nothing
+        CustomEnum <$> o .: "name" <*> case value of
+          Object vo -> vo .:? "name"
+          _ -> pure Nothing
       _ -> pure Other
 
 -- | We need to know Section to find "Awaiting Deployment"
@@ -56,6 +53,13 @@ data Membership = Membership
 instance FromJSON Membership where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
 
+data ResourceSubtype = DefaultTask | Milestone | Section
+  deriving (Eq, Generic, Show)
+
+instance FromJSON ResourceSubtype where
+  parseJSON =
+    genericParseJSON $ defaultOptions { constructorTagModifier = snakeCase }
+
 data Task = Task
   { tAssignee :: Maybe Named
   , tName :: Text
@@ -64,6 +68,7 @@ data Task = Task
   , tCustomFields :: [CustomField]
   , tMemberships :: [Membership]
   , tId :: Int
+  , tResourceSubtype :: ResourceSubtype
   }
   deriving (Eq, Generic, Show)
 

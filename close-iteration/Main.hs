@@ -18,20 +18,24 @@ main = do
     perspective <- asks appPerspective
     tasks <- getProjectTasks projectId AllTasks
 
-    stories <- pooledForConcurrentlyN maxRequests tasks $ \Named {..} -> do
-      story@Story {..} <- fromTask <$> getTask nId
-      let url = "<" <> storyUrl projectId story <> ">"
-      logInfo . display $ url <> " " <> sName
+    let
+      processStories =
+        fmap catMaybes . pooledForConcurrentlyN maxRequests tasks
+    stories <- processStories $ \Named {..} -> do
+      mStory <- fromTask <$> getTask nId
+      for mStory $ \story@Story {..} -> do
+        let url = "<" <> storyUrl projectId story <> ">"
+        logInfo . display $ url <> " " <> sName
 
-      let incompleteNoCarry = not sCompleted && isNothing sCarryOver
-      when incompleteNoCarry
-        $ logWarn
-        $ "No carry over on incomplete story: "
-        <> display url
+        let incompleteNoCarry = not sCompleted && isNothing sCarryOver
+        when incompleteNoCarry
+          $ logWarn
+          $ "No carry over on incomplete story: "
+          <> display url
 
-      pure $ case (incompleteNoCarry, perspective) of
-        (True, Pessimistic) -> story { sCarryOver = sCost }
-        (_, _) -> story
+        pure $ case (incompleteNoCarry, perspective) of
+          (True, Pessimistic) -> story { sCarryOver = sCost }
+          (_, _) -> story
 
     let
       isCarried = isJust . sCarryOver
