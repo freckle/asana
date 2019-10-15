@@ -7,6 +7,7 @@ module Asana.Story
 import RIO
 
 import Asana.Api
+import Asana.Api.Gid (Gid, gidToText)
 import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Semigroup ((<>))
 import RIO.Text (Text)
@@ -24,7 +25,7 @@ data Story = Story
   , sCarryOver :: Maybe Integer
   , sCanDo :: Maybe Bool
   , sReproduced :: Maybe Bool
-  , sId :: Int
+  , sGid :: Gid
   }
   deriving Show
 
@@ -43,7 +44,7 @@ fromTask Task {..} = case tResourceSubtype of
     , sCarryOver = findNumber "carryover" tCustomFields
     , sCanDo = findYesNo "can do?" tCustomFields
     , sReproduced = findYesNo "Reproduces on seed data?" tCustomFields
-    , sId = tId
+    , sGid = tGid
     }
  where
   awaitingDeployment = flip any tMemberships $ \Membership {..} ->
@@ -70,4 +71,4 @@ caseFoldEq x y = T.toCaseFold x == T.toCaseFold y
 
 storyUrl :: Text -> Story -> Text
 storyUrl projectId Story {..} =
-  "https://app.asana.com/0/" <> projectId <> "/" <> T.pack (show sId) <> "/f"
+  "https://app.asana.com/0/" <> projectId <> "/" <> gidToText sGid <> "/f"

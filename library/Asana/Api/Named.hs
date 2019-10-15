@@ -5,12 +5,13 @@ module Asana.Api.Named
 
 import RIO
 
+import Asana.Api.Gid (Gid)
 import Data.Aeson
 import Data.Aeson.Casing
 import RIO.Text (Text)
 
 data Named = Named
-  { nId :: Integer
+  { nGid :: Gid
   , nName :: Text
   }
   deriving (Eq, Generic, Show)

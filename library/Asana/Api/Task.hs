@@ -12,6 +12,7 @@ module Asana.Api.Task
 
 import RIO
 
+import Asana.Api.Gid (Gid, gidToText)
 import Asana.Api.Named
 import Asana.Api.Request
 import Asana.App
@@ -67,7 +68,7 @@ data Task = Task
   , tCompletedAt :: Maybe UTCTime
   , tCustomFields :: [CustomField]
   , tMemberships :: [Membership]
-  , tId :: Int
+  , tGid :: Gid
   , tResourceSubtype :: ResourceSubtype
   }
   deriving (Eq, Generic, Show)
@@ -76,8 +77,8 @@ instance FromJSON Task where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
 
 -- | Return all details for a task by id
-getTask :: Integer -> AppM Task
-getTask taskId = getSingle $ "/tasks/" <> show taskId
+getTask :: Gid -> AppM Task
+getTask taskId = getSingle $ "/tasks/" <> T.unpack (gidToText taskId)
 
 -- | Return compact task details for a project
 --
@@ -106,8 +107,9 @@ getProjectTasksCompletedSince projectId since = getAllParams
   (T.unpack $ "/projects/" <> projectId <> "/tasks")
   [("completed_since", formatISO8601 since)]
 
-putEnumField :: Integer -> (Integer, Maybe Integer) -> AppM ()
-putEnumField taskId (fieldId, enumId) = put ("/tasks/" <> show taskId) $ object
-  [ "data"
-      .= object ["custom_fields" .= object [tshow fieldId .= toJSON enumId]]
-  ]
+putEnumField :: Gid -> (Integer, Maybe Integer) -> AppM ()
+putEnumField taskId (fieldId, enumId) =
+  put ("/tasks/" <> T.unpack (gidToText taskId)) $ object
+    [ "data"
+        .= object ["custom_fields" .= object [tshow fieldId .= toJSON enumId]]
+    ]
