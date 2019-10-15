@@ -24,6 +24,7 @@ module Main (main) where
 import RIO
 
 import Asana.Api
+import Asana.Api.Gid (Gid)
 import Asana.App
 import Asana.Story
 import Control.Monad (guard, when)
@@ -33,7 +34,7 @@ import RIO.Text (Text)
 import Text.Printf (printf)
 
 data Point = Point
-  { pId :: Int
+  { pGid :: Gid
   , pUrl :: Text
   , pName :: Text
   , pImpact :: Double
@@ -70,7 +71,7 @@ main = do
       processStories =
         fmap catMaybes . pooledForConcurrentlyN maxRequests tasks
     stories <- processStories $ \Named {..} -> do
-      mStory <- fromTask <$> getTask nId
+      mStory <- fromTask <$> getTask nGid
       for mStory $ \story -> do
         let url = "<" <> storyUrl projectId story <> ">"
         logInfo . display $ url <> " " <> sName story
@@ -88,7 +89,7 @@ main = do
         impact <- (*) <$> (fromInteger <$> sImpact) <*> virality
         cost <- fromInteger <$> sCost
         let url = storyUrl projectId story
-        pure $ Point sId url sName impact cost
+        pure $ Point sGid url sName impact cost
       (xMid, yMid) = midPoints points
       toActionability Point {..}
         | pImpact > yMid && pEffort < xMid = Quick
@@ -101,7 +102,7 @@ main = do
     logDebug "Label actionability"
     pooledForConcurrentlyN_ maxRequests points $ \point@Point {..} -> do
       let actionability = toActionability point
-      putEnumField (fromIntegral pId) $ toActionabilityFieldIds actionability
+      putEnumField pGid $ toActionabilityFieldIds actionability
       logInfo . fromString $ printf
         "Updated actionability %s %s: %s (%.2fc/%.2fi)"
         pUrl

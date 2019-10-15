@@ -22,7 +22,7 @@ main = do
       processStories =
         fmap catMaybes . pooledForConcurrentlyN maxRequests tasks
     stories <- processStories $ \Named {..} -> do
-      mStory <- fromTask <$> getTask nId
+      mStory <- fromTask <$> getTask nGid
       for mStory $ \story@Story {..} -> do
         let url = "<" <> storyUrl projectId story <> ">"
         logInfo . display $ url <> " " <> sName
