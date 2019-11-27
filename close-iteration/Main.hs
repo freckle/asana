@@ -51,8 +51,9 @@ main = do
       incompleteCarryOver = sum $ mapMaybe sCarryOver incompleteStories
 
     hPutBuilder stdout . getUtf8Builder $ foldMap
-      ("\n" <>)
-      [ "Completed"
+      (<> "\n")
+      [ ""
+      , "Completed"
       , "- new points: " <> display completedCost
       , "- carried over points: " <> display completedCarryOver
       , "- new stories: " <> display (length completedStories)
