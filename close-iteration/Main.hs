@@ -52,7 +52,6 @@ main = do
 
       totalCompletedCost =
         sum [completedCostCarried, completedCostNew, completedCostPartial]
-      totalCommittedCost = sum [totalCompletedCost, incompleteCarryOver]
 
     hPutBuilder stdout . getUtf8Builder $ foldMap
       (<> "\n")
@@ -84,16 +83,4 @@ main = do
       <> " (worth "
       <> display incompleteCost
       <> " total)"
-      , ""
-      , "Velocity: "
-      <> display totalCompletedCost
-      <> "/"
-      <> display totalCommittedCost
-      <> " ("
-      <> display (velocity totalCompletedCost totalCommittedCost)
-      <> "%)"
       ]
-
-velocity :: Integer -> Integer -> Double
-velocity completed committed =
-  (fromIntegral completed / fromIntegral committed) * 100
