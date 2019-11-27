@@ -38,48 +38,52 @@ main = do
           (_, _) -> story
 
     let
-      isCarried = isJust . sCarryOver
-      (completedAndCarriedStories, incompleteStories) =
-        partition sCompleted stories
-
-      (carriedStories, completedStories) =
-        partition isCarried completedAndCarriedStories
-      completedCost = sum $ mapMaybe sCost completedStories
-      completedCarryOver = sum $ mapMaybe sCarryOver carriedStories
+      (completedStories, incompleteStories) = partition sCompleted stories
 
       incompleteCost = sum $ mapMaybe sCost incompleteStories
       incompleteCarryOver = sum $ mapMaybe sCarryOver incompleteStories
 
-      completedWithCarry = completedCost + completedCarryOver
+      (completedStoriesCarried, completedStoriesNew) =
+        partition (isJust . sCarryOver) completedStories
+
+      completedCostCarried = sum $ mapMaybe sCarryOver completedStoriesCarried
+      completedCostNew = sum $ mapMaybe sCost completedStoriesNew
+      completedCostPartial = incompleteCost - incompleteCarryOver
 
       totalCompletedCost =
-        sum [completedWithCarry, incompleteCost - incompleteCarryOver]
-
-      totalCommittedCost = sum [completedWithCarry, incompleteCost]
-
-      storiesCompletedWithCarry =
-        length completedStories + length carriedStories
+        sum [completedCostCarried, completedCostNew, completedCostPartial]
+      totalCommittedCost = sum [totalCompletedCost, incompleteCarryOver]
 
     hPutBuilder stdout . getUtf8Builder $ foldMap
       (<> "\n")
       [ ""
       , "Completed points: "
-      <> display completedWithCarry
+      <> display totalCompletedCost
       <> " ("
-      <> display completedCarryOver
-      <> " were carry-over)"
+      <> display completedCostCarried
+      <> " carry-over"
+      <> ", "
+      <> display completedCostNew
+      <> " new"
+      <> ", "
+      <> display completedCostPartial
+      <> " in carrying tasks"
+      <> ")"
       , "Completed tasks: "
-      <> display storiesCompletedWithCarry
+      <> display (length completedStories)
       <> " ("
-      <> display (length carriedStories)
-      <> " were carry-over)"
+      <> display (length completedStoriesCarried)
+      <> " carry-over"
+      <> ", "
+      <> display (length completedStoriesNew)
+      <> " new)"
       , ""
       , "Incomplete points: " <> display incompleteCarryOver
       , "Incomplete tasks: "
       <> display (length incompleteStories)
-      <> " ("
+      <> " (worth "
       <> display incompleteCost
-      <> " total cost)"
+      <> " total)"
       , ""
       , "Velocity: "
       <> display totalCompletedCost
