@@ -50,24 +50,46 @@ main = do
       incompleteCost = sum $ mapMaybe sCost incompleteStories
       incompleteCarryOver = sum $ mapMaybe sCarryOver incompleteStories
 
+      completedWithCarry = completedCost + completedCarryOver
+
+      totalCompletedCost =
+        sum [completedWithCarry, incompleteCost - incompleteCarryOver]
+
+      totalCommittedCost = sum [completedWithCarry, incompleteCost]
+
+      storiesCompletedWithCarry =
+        length completedStories + length carriedStories
+
     hPutBuilder stdout . getUtf8Builder $ foldMap
       (<> "\n")
       [ ""
-      , "Completed"
-      , "- new points: " <> display completedCost
-      , "- carried over points: " <> display completedCarryOver
-      , "- new stories: " <> display (length completedStories)
-      , "- carried over stories: " <> display (length carriedStories)
-      , "Incomplete"
-      , "- points completed: " <> display (incompleteCost - incompleteCarryOver)
-      , "- carry over points: " <> display incompleteCarryOver
-      , "- carry over stories: " <> display (length incompleteStories)
+      , "Completed points: "
+      <> display completedWithCarry
+      <> " ("
+      <> display completedCarryOver
+      <> " were carry-over)"
+      , "Completed tasks: "
+      <> display storiesCompletedWithCarry
+      <> " ("
+      <> display (length carriedStories)
+      <> " were carry-over)"
       , ""
-      , display
-        (completedCost
-        + completedCarryOver
-        + (incompleteCost - incompleteCarryOver)
-        )
-      <> " / "
-      <> display (completedCost + completedCarryOver + incompleteCost)
+      , "Incomplete points: " <> display incompleteCarryOver
+      , "Incomplete tasks: "
+      <> display (length incompleteStories)
+      <> " ("
+      <> display incompleteCost
+      <> " total cost)"
+      , ""
+      , "Velocity: "
+      <> display totalCompletedCost
+      <> "/"
+      <> display totalCommittedCost
+      <> " ("
+      <> display (velocity totalCompletedCost totalCommittedCost)
+      <> "%)"
       ]
+
+velocity :: Integer -> Integer -> Double
+velocity completed committed =
+  (fromIntegral completed / fromIntegral committed) * 100
