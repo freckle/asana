@@ -86,11 +86,11 @@ getTask taskId = getSingle $ "/tasks/" <> T.unpack (gidToText taskId)
 -- precludes us logging things each time we request an element. So we return
 -- @'Named'@ for now and let the caller use @'getTask'@ themselves.
 --
-getProjectTasks :: Text -> TaskStatusFilter -> AppM [Named]
+getProjectTasks :: Gid -> TaskStatusFilter -> AppM [Named]
 getProjectTasks projectId taskStatusFilter = do
   now <- liftIO getCurrentTime
   getAllParams
-    (T.unpack $ "/projects/" <> projectId <> "/tasks")
+    (T.unpack $ "/projects/" <> gidToText projectId <> "/tasks")
     (completedSince now)
  where
   completedSince now = case taskStatusFilter of
@@ -102,9 +102,9 @@ formatISO8601 = formatTime defaultTimeLocale (iso8601DateFormat Nothing)
 
 data TaskStatusFilter = IncompletedTasks | AllTasks
 
-getProjectTasksCompletedSince :: Text -> UTCTime -> AppM [Named]
+getProjectTasksCompletedSince :: Gid -> UTCTime -> AppM [Named]
 getProjectTasksCompletedSince projectId since = getAllParams
-  (T.unpack $ "/projects/" <> projectId <> "/tasks")
+  (T.unpack $ "/projects/" <> gidToText projectId <> "/tasks")
   [("completed_since", formatISO8601 since)]
 
 putEnumField :: Gid -> (Integer, Maybe Integer) -> AppM ()

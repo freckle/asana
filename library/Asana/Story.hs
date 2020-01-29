@@ -69,6 +69,10 @@ findYesNo x = fmap parse . listToMaybe . mapMaybe go
 caseFoldEq :: Text -> Text -> Bool
 caseFoldEq x y = T.toCaseFold x == T.toCaseFold y
 
-storyUrl :: Text -> Story -> Text
+storyUrl :: Gid -> Story -> Text
 storyUrl projectId Story {..} =
-  "https://app.asana.com/0/" <> projectId <> "/" <> gidToText sGid <> "/f"
+  "https://app.asana.com/0/"
+    <> gidToText projectId
+    <> "/"
+    <> gidToText sGid
+    <> "/f"

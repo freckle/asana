@@ -3,6 +3,7 @@ module Main (main) where
 import RIO
 
 import Asana.Api
+import Asana.Api.Gid (Gid)
 import Asana.App
 import Asana.Story
 import Control.Monad (unless, when)
@@ -70,7 +71,7 @@ main = do
       <> " stories)"
       ]
 
-makeUrl :: Text -> Story -> Text
+makeUrl :: Gid -> Story -> Text
 makeUrl projectId story = "<" <> storyUrl projectId story <> ">"
 
 mayCanDo :: Story -> AppM (Maybe Story)

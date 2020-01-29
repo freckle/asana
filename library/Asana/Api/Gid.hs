@@ -2,6 +2,7 @@
 module Asana.Api.Gid
     ( Gid
     , gidToText
+    , textToGid
     ) where
 
 import RIO
@@ -13,3 +14,5 @@ newtype Gid = Gid { gidToText :: Text }
   deriving (Eq, Generic, Show)
   deriving newtype (FromJSON, ToJSON)
 
+textToGid :: Text -> Gid
+textToGid = Gid

@@ -13,6 +13,7 @@ module Asana.App
 
 import RIO
 
+import Asana.Api.Gid (Gid, textToGid)
 import Control.Monad.IO.Class (liftIO)
 import Data.Semigroup ((<>))
 import LoadEnv
@@ -34,7 +35,7 @@ import System.Environment (getEnv)
 import System.IO (stderr)
 
 data App = App
-  { appProjectId :: Text
+  { appProjectId :: Gid
   , appApiAccessKey :: Text
   , appLogLevel :: LogLevel
   , appPerspective :: Perspective
@@ -68,12 +69,14 @@ loadApp = do
     execParser $ info (helper <*> optParser) $ fullDesc <> progDesc
       "Report information about an iteration project"
   let logFunc = error "not initialized"
-  pure App {..}
+  pure App { .. }
  where
-  optParser :: Parser (Text, LogLevel, Perspective, Bool)
+  optParser :: Parser (Gid, LogLevel, Perspective, Bool)
   optParser =
     (,,,)
-      <$> (T.pack <$> strOption (long "project" <> help "Project Id"))
+      <$> (textToGid . T.pack <$> strOption
+            (long "project" <> help "Project Id")
+          )
       <*> flag LevelInfo LevelDebug (long "debug")
       <*> flag Optimistic Pessimistic (long "pessimistic")
       <*> flag False True (long "ignore-no-can-do")
