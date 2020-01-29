@@ -67,3 +67,13 @@ executables:
     dependencies:
       - asana
       - rio
+  cycle-time:
+    main: Main.hs
+    source-dirs: cycle-time
+    dependencies:
+      - asana
+      - cassava
+      - rio
+      - statistics
+      - temporary
+      - vector
