@@ -84,7 +84,7 @@ get path params limit mOffset = do
     <> show limit -- Ignored on not paging responses
     <> maybe "" ("&offset=" <>) mOffset
     <> concatMap (\(k, v) -> "&" <> k <> "=" <> v) params
-  response <- retry 10 $ httpJSON (addAuthorization auth request)
+  response <- retry 50 $ httpJSON (addAuthorization auth request)
   when (300 <= getResponseStatusCode response)
     . logWarn
     $ "GET failed "
@@ -113,8 +113,22 @@ addAuthorization auth =
 retry :: forall a . Int -> AppM (Response a) -> AppM (Response a)
 retry attempt go
   | attempt <= 0 = go
-  | otherwise = handler =<< go
+  | otherwise = handler =<< go `catch` handleParseError
  where
+  handleParseError :: JSONException -> AppM (Response a)
+  handleParseError e = case e of
+    JSONParseException _ rsp _ -> orThrow e rsp
+    JSONConversionException _ rsp _ -> orThrow e rsp
+
+  orThrow :: Exception e => e -> Response b -> AppM (Response a)
+  orThrow e response
+    | getResponseStatusCode response == 429 = do
+      let seconds = getResponseDelay response
+      logWarn $ "Retrying after " <> display seconds <> " seconds"
+      threadDelay $ seconds * 1000000
+      retry (pred attempt) go
+    | otherwise = liftIO $ throwIO e
+
   handler :: Response a -> AppM (Response a)
   handler response
     | getResponseStatusCode response == 429 = do
