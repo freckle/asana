@@ -44,7 +44,7 @@ data App = App
   }
 
 instance HasLogFunc App where
-  logFuncL = lens logFunc (\app logFunc -> app {logFunc})
+  logFuncL = lens logFunc (\app logFunc -> app { logFunc })
 
 data Perspective = Pessimistic | Optimistic
 

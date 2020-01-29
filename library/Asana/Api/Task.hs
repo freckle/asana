@@ -66,6 +66,7 @@ data Task = Task
   , tName :: Text
   , tCompleted :: Bool
   , tCompletedAt :: Maybe UTCTime
+  , tCreatedAt :: UTCTime
   , tCustomFields :: [CustomField]
   , tMemberships :: [Membership]
   , tGid :: Gid
