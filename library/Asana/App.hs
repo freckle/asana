@@ -3,12 +3,18 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Asana.App
-  ( App(..)
+  ( App
+  , AppWith(..)
   , AppM
   , Perspective(..)
   , loadApp
+  , loadAppWith
   , runApp
   , liftIO
+  -- * Argument parsers
+  , parseIgnoreNoCanDo
+  , parsePessimistic
+  , parseProjectId
   ) where
 
 import RIO
@@ -34,23 +40,23 @@ import qualified RIO.Text as T
 import System.Environment (getEnv)
 import System.IO (stderr)
 
-data App = App
-  { appProjectId :: Gid
-  , appApiAccessKey :: Text
+data AppWith ext = App
+  { appApiAccessKey :: Text
   , appLogLevel :: LogLevel
-  , appPerspective :: Perspective
-  , appIgnoreNoCanDo :: Bool
   , logFunc :: LogFunc
+  , appExt :: ext
   }
 
-instance HasLogFunc App where
+type App = AppWith ()
+
+instance HasLogFunc (AppWith ext) where
   logFuncL = lens logFunc (\app logFunc -> app { logFunc })
 
 data Perspective = Pessimistic | Optimistic
 
-type AppM = RIO App
+type AppM ext = RIO (AppWith ext)
 
-runApp :: App -> AppM a -> IO a
+runApp :: AppWith ext -> AppM ext a -> IO a
 runApp app action = do
   logOptions <-
     setLogUseLoc False
@@ -62,21 +68,27 @@ runApp app action = do
     action
 
 loadApp :: IO App
-loadApp = do
+loadApp = loadAppWith $ pure ()
+
+loadAppWith :: forall ext . Parser ext -> IO (AppWith ext)
+loadAppWith parseExt = do
   loadEnvFrom ".env.asana"
   appApiAccessKey <- T.pack <$> getEnv "ASANA_API_KEY"
-  (appProjectId, appLogLevel, appPerspective, appIgnoreNoCanDo) <-
+  (appLogLevel, appExt) <-
     execParser $ info (helper <*> optParser) $ fullDesc <> progDesc
       "Report information about an iteration project"
   let logFunc = error "not initialized"
   pure App { .. }
  where
-  optParser :: Parser (Gid, LogLevel, Perspective, Bool)
-  optParser =
-    (,,,)
-      <$> (textToGid . T.pack <$> strOption
-            (long "project" <> help "Project Id")
-          )
-      <*> flag LevelInfo LevelDebug (long "debug")
-      <*> flag Optimistic Pessimistic (long "pessimistic")
-      <*> flag False True (long "ignore-no-can-do")
+  optParser :: Parser (LogLevel, ext)
+  optParser = (,) <$> flag LevelInfo LevelDebug (long "debug") <*> parseExt
+
+parseIgnoreNoCanDo :: Parser Bool
+parseIgnoreNoCanDo = flag False True (long "ignore-no-can-do")
+
+parsePessimistic :: Parser Perspective
+parsePessimistic = flag Optimistic Pessimistic (long "pessimistic")
+
+parseProjectId :: Parser Gid
+parseProjectId =
+  textToGid . T.pack <$> strOption (long "project" <> help "Project Id")

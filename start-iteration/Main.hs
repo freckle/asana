@@ -12,11 +12,16 @@ import Data.List (partition, tail, zipWith)
 import Data.Maybe (isJust, isNothing, mapMaybe)
 import Data.Semigroup ((<>))
 
+data AppExt = AppExt
+  { appProjectId :: Gid
+  , appIgnoreNoCanDo :: Bool
+  }
+
 main :: IO ()
 main = do
-  app <- loadApp
+  app <- loadAppWith $ AppExt <$> parseProjectId <*> parseIgnoreNoCanDo
   runApp app $ do
-    projectId <- asks appProjectId
+    projectId <- asks $ appProjectId . appExt
     tasks <- getProjectTasks projectId AllTasks
 
     let
@@ -74,14 +79,14 @@ main = do
 makeUrl :: Gid -> Story -> Text
 makeUrl projectId story = "<" <> storyUrl projectId story <> ">"
 
-mayCanDo :: Story -> AppM (Maybe Story)
+mayCanDo :: Story -> AppM AppExt (Maybe Story)
 mayCanDo story = do
-  projectId <- asks appProjectId
+  projectId <- asks $ appProjectId . appExt
   let url = makeUrl projectId story
   case sCanDo story of
     Nothing -> do
       logWarn $ "Story does not have a \"can do?\": " <> display url
-      ignoreNoCanDo <- asks appIgnoreNoCanDo
+      ignoreNoCanDo <- asks $ appIgnoreNoCanDo . appExt
       pure $ if ignoreNoCanDo then Nothing else Just story
     Just canDo -> do
       unless canDo . logWarn $ "Story marked as can't do: " <> display url

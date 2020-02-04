@@ -3,6 +3,7 @@ module Main (main) where
 import RIO
 
 import Asana.Api
+import Asana.Api.Gid (Gid)
 import Asana.App
 import Asana.Story
 import Control.Monad (when)
@@ -10,12 +11,17 @@ import Data.List (partition)
 import Data.Maybe (isJust, isNothing, mapMaybe)
 import Data.Semigroup ((<>))
 
+data AppExt = AppExt
+  { appProjectId :: Gid
+  , appPerspective :: Perspective
+  }
+
 main :: IO ()
 main = do
-  app <- loadApp
+  app <- loadAppWith $ AppExt <$> parseProjectId <*> parsePessimistic
   runApp app $ do
-    projectId <- asks appProjectId
-    perspective <- asks appPerspective
+    projectId <- asks $ appProjectId . appExt
+    perspective <- asks $ appPerspective . appExt
     tasks <- getProjectTasks projectId AllTasks
 
     let

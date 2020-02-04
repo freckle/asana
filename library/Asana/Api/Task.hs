@@ -78,7 +78,7 @@ instance FromJSON Task where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
 
 -- | Return all details for a task by id
-getTask :: Gid -> AppM Task
+getTask :: Gid -> AppM ext Task
 getTask taskId = getSingle $ "/tasks/" <> T.unpack (gidToText taskId)
 
 -- | Return compact task details for a project
@@ -87,7 +87,7 @@ getTask taskId = getSingle $ "/tasks/" <> T.unpack (gidToText taskId)
 -- precludes us logging things each time we request an element. So we return
 -- @'Named'@ for now and let the caller use @'getTask'@ themselves.
 --
-getProjectTasks :: Gid -> TaskStatusFilter -> AppM [Named]
+getProjectTasks :: Gid -> TaskStatusFilter -> AppM ext [Named]
 getProjectTasks projectId taskStatusFilter = do
   now <- liftIO getCurrentTime
   getAllParams
@@ -103,12 +103,12 @@ formatISO8601 = formatTime defaultTimeLocale (iso8601DateFormat Nothing)
 
 data TaskStatusFilter = IncompletedTasks | AllTasks
 
-getProjectTasksCompletedSince :: Gid -> UTCTime -> AppM [Named]
+getProjectTasksCompletedSince :: Gid -> UTCTime -> AppM ext [Named]
 getProjectTasksCompletedSince projectId since = getAllParams
   (T.unpack $ "/projects/" <> gidToText projectId <> "/tasks")
   [("completed_since", formatISO8601 since)]
 
-putEnumField :: Gid -> (Integer, Maybe Integer) -> AppM ()
+putEnumField :: Gid -> (Integer, Maybe Integer) -> AppM ext ()
 putEnumField taskId (fieldId, enumId) =
   put ("/tasks/" <> T.unpack (gidToText taskId)) $ object
     [ "data"
