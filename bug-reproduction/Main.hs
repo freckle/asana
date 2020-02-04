@@ -3,12 +3,17 @@ module Main (main) where
 import RIO
 
 import Asana.Api
+import Asana.Api.Gid (Gid)
 import Asana.App
 import Asana.Story
 import Control.Monad (foldM, when)
 import Data.Maybe (isNothing)
 import Data.Semigroup.Generic (gmappend, gmempty)
 import RIO.Time
+
+newtype AppExt = AppExt
+  { appProjectId :: Gid
+  }
 
 data Totals = Totals
   { tUnknown :: [Story]
@@ -32,14 +37,14 @@ toTotals story@Story {..}
 
 main :: IO ()
 main = do
-  app <- loadApp
+  app <- loadAppWith $ AppExt <$> parseProjectId
   runApp app $ do
-    projectId <- asks appProjectId
+    projectId <- asks $ appProjectId . appExt
     tasks <- getProjectTasksCompletedSince projectId
       $ UTCTime (fromGregorian 2018 10 15) 0
 
     let
-      accumulateStory :: Totals -> Named -> AppM Totals
+      accumulateStory :: Totals -> Named -> AppM ext Totals
       accumulateStory totals named = do
         mStory <- fromTask <$> getTask (nGid named)
         case mStory of

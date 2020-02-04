@@ -24,7 +24,7 @@ data Project = Project
 instance FromJSON Project where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
 
-getProjects :: AppM [Project]
+getProjects :: AppM ext [Project]
 getProjects = getAllParams
   (T.unpack "/projects/")
   [("team", "12760955045995"), ("opt_fields", "created_at,name")]

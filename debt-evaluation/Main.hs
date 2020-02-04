@@ -33,6 +33,10 @@ import Data.Maybe (mapMaybe)
 import RIO.Text (Text)
 import Text.Printf (printf)
 
+newtype AppExt = AppExt
+  { appProjectId :: Gid
+  }
+
 data Point = Point
   { pGid :: Gid
   , pUrl :: Text
@@ -61,9 +65,9 @@ data Priority
 
 main :: IO ()
 main = do
-  app <- loadApp
+  app <- loadAppWith $ AppExt <$> parseProjectId
   runApp app $ do
-    projectId <- asks appProjectId
+    projectId <- asks $ appProjectId . appExt
 
     logDebug "Fetch stories"
     tasks <- getProjectTasks projectId IncompletedTasks
