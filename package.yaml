@@ -73,6 +73,7 @@ executables:
     dependencies:
       - asana
       - cassava
+      - containers
       - rio
       - statistics
       - temporary

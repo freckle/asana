@@ -9,15 +9,17 @@ import RIO
 import Asana.Api
 import Asana.Api.Gid (Gid, gidToText)
 import Asana.Api.Project (Project(pCreatedAt, pGid, pName), getProjects)
-import Asana.App (appExt, loadAppWith, parseBugProjectId, parseYear, runApp)
+import Asana.App
+  (AppM, appExt, loadAppWith, parseBugProjectId, parseYear, runApp)
 import Control.Monad (when)
-import Data.Csv as Csv
+import qualified Data.Csv as Csv
 import Data.Foldable (maximum, minimum)
 import Data.List (intercalate, nub)
+import qualified Data.Map.Strict as Map
 import qualified Data.Vector as V
 import RIO.ByteString (writeFile)
 import RIO.ByteString.Lazy (toStrict)
-import RIO.Text (isPrefixOf)
+import RIO.Text (isPrefixOf, unpack)
 import RIO.Time (NominalDiffTime, diffUTCTime, toGregorian, utctDay)
 import Statistics.Quantile (median, medianUnbiased)
 import Statistics.Sample (kurtosis, mean, skewness, stdDev)
@@ -38,32 +40,21 @@ main = do
     year <- asks $ appYear . appExt
     projects <- filter (approvedProject year) <$> getProjects
 
-    taskGids <-
-      fmap (nub . concat)
-      . pooledForConcurrentlyN maxRequests projects
-      $ \project -> do
-          logDebug . fromString $ "Project tasks: " <> show
-            (gidToText $ pGid project)
-          fmap nGid <$> getProjectTasks (pGid project) AllTasks
-    bugProjectGid <- asks $ appBugProject . appExt
-    bugTaskGids <- fmap nGid <$> getProjectTasks bugProjectGid AllTasks
+    taskGids <- fetchRelevantTaskGids projects
 
-    let nonBugGids = filter (`notElem` bugTaskGids) taskGids
+    tasks <- pooledForConcurrentlyN maxRequests taskGids getTask
+    logDebug "Write task CSV"
+    writeTaskCsv tasks
 
-    cycleTimes <-
-      zscoreFilter
-      . V.fromList
-      . fmap realToFrac
-      . mapMaybe mayCycleTime
-      <$> pooledForConcurrentlyN maxRequests nonBugGids getTask
+    let
+      cycleTimes = zscoreFilter . V.fromList . fmap realToFrac $ mapMaybe
+        mayCycleTime
+        tasks
 
     when (null cycleTimes) $ logWarn "No cycle time to compute"
 
     logDebug "Write histogram CSV"
-    filePath <- liftIO $ emptySystemTempFile ".csv"
-    let histogramCsv = uncurry V.zip $ histogram @_ @_ @Double 100 cycleTimes
-    writeFile filePath . toStrict . Csv.encode $ V.toList histogramCsv
-    logInfo . fromString $ "Histogram written to " <> filePath
+    writeHistogramCsv cycleTimes
 
     logDebug "Display Cycle Time"
     let
@@ -111,3 +102,42 @@ mayCycleTime task = do
   -- FIXME: Sometimes this is true
   guard $ completedAt > tCreatedAt task
   Just . diffUTCTime completedAt $ tCreatedAt task
+
+writeHistogramCsv :: Vector Double -> AppM ext ()
+writeHistogramCsv cycleTimes = do
+  filePath <- liftIO $ emptySystemTempFile ".csv"
+  let histogramCsv = uncurry V.zip $ histogram @_ @_ @Double 100 cycleTimes
+  writeFile filePath . toStrict . Csv.encode $ V.toList histogramCsv
+  logInfo . fromString $ "Histogram written to " <> filePath
+
+writeTaskCsv :: [Task] -> AppM ext ()
+writeTaskCsv tasks = do
+  filePath <- liftIO $ emptySystemTempFile ".csv"
+  let
+    toRecord task = Map.fromList
+      [ ("name" :: String, unpack $ tName task)
+      , ("task ID" :: String, unpack $ taskUrl task)
+      , ( "cycle time"
+        , maybe "" (show . realToFrac @_ @Double) $ mayCycleTime task
+        )
+      ]
+  writeFile filePath
+    . toStrict
+    . Csv.encodeByName (V.fromList ["name", "task ID", "cycle time"])
+    $ toRecord
+    <$> tasks
+  logInfo . fromString $ "Tasks written to " <> filePath
+
+fetchRelevantTaskGids :: Traversable t => t Project -> AppM AppExt [Gid]
+fetchRelevantTaskGids projects = do
+  taskGids <-
+    fmap (nub . concat)
+    . pooledForConcurrentlyN maxRequests projects
+    $ \project -> do
+        logDebug . fromString $ "Project tasks: " <> show
+          (gidToText $ pGid project)
+        fmap nGid <$> getProjectTasks (pGid project) AllTasks
+  bugProjectGid <- asks $ appBugProject . appExt
+  bugTaskGids <- fmap nGid <$> getProjectTasks bugProjectGid AllTasks
+
+  pure $ filter (`notElem` bugTaskGids) taskGids

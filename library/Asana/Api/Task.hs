@@ -8,6 +8,7 @@ module Asana.Api.Task
   , getProjectTasks
   , getProjectTasksCompletedSince
   , putEnumField
+  , taskUrl
   ) where
 
 import RIO
@@ -114,3 +115,6 @@ putEnumField taskId (fieldId, enumId) =
     [ "data"
         .= object ["custom_fields" .= object [tshow fieldId .= toJSON enumId]]
     ]
+
+taskUrl :: Task -> Text
+taskUrl Task {..} = "https://app.asana.com/0/0/" <> gidToText tGid <> "/f"
