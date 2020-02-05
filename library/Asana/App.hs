@@ -15,6 +15,8 @@ module Asana.App
   , parseIgnoreNoCanDo
   , parsePessimistic
   , parseProjectId
+  , parseBugProjectId
+  , parseYear
   ) where
 
 import RIO
@@ -25,6 +27,7 @@ import Data.Semigroup ((<>))
 import LoadEnv
 import Options.Applicative
   ( Parser
+  , auto
   , execParser
   , flag
   , fullDesc
@@ -32,6 +35,7 @@ import Options.Applicative
   , helper
   , info
   , long
+  , option
   , progDesc
   , strOption
   )
@@ -92,3 +96,10 @@ parsePessimistic = flag Optimistic Pessimistic (long "pessimistic")
 parseProjectId :: Parser Gid
 parseProjectId =
   textToGid . T.pack <$> strOption (long "project" <> help "Project Id")
+
+parseBugProjectId :: Parser Gid
+parseBugProjectId =
+  textToGid . T.pack <$> strOption (long "bug-project" <> help "Bug Project Id")
+
+parseYear :: Parser Integer
+parseYear = option auto (long "year" <> help "The year to view")

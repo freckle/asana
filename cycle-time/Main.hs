@@ -7,9 +7,9 @@ module Main (main) where
 import RIO
 
 import Asana.Api
-import Asana.Api.Gid (gidToText, textToGid)
+import Asana.Api.Gid (Gid, gidToText)
 import Asana.Api.Project (Project(pCreatedAt, pGid, pName), getProjects)
-import Asana.App (loadApp, runApp)
+import Asana.App (appExt, loadAppWith, parseBugProjectId, parseYear, runApp)
 import Control.Monad (when)
 import Data.Csv as Csv
 import Data.Foldable (maximum, minimum)
@@ -25,12 +25,18 @@ import Statistics.Sample.Histogram (histogram)
 import System.IO.Temp (emptySystemTempFile)
 import Text.Printf (printf)
 
+data AppExt = AppExt
+  { appYear :: Integer
+  , appBugProject :: Gid
+  }
+
 main :: IO ()
 main = do
-  app <- loadApp
+  app <- loadAppWith $ AppExt <$> parseYear <*> parseBugProjectId
   runApp app $ do
     logDebug "Fetch projects"
-    projects <- filter approvedProject <$> getProjects
+    year <- asks $ appYear . appExt
+    projects <- filter (approvedProject year) <$> getProjects
 
     taskGids <-
       fmap (nub . concat)
@@ -39,8 +45,8 @@ main = do
           logDebug . fromString $ "Project tasks: " <> show
             (gidToText $ pGid project)
           fmap nGid <$> getProjectTasks (pGid project) AllTasks
-    bugTaskGids <-
-      fmap nGid <$> getProjectTasks (textToGid "56224185180675") AllTasks
+    bugProjectGid <- asks $ appBugProject . appExt
+    bugTaskGids <- fmap nGid <$> getProjectTasks bugProjectGid AllTasks
 
     let nonBugGids = filter (`notElem` bugTaskGids) taskGids
 
@@ -93,8 +99,8 @@ zscoreFilter p =
 toDays :: Double -> Int
 toDays = floor . (/ 86400)
 
-approvedProject :: Project -> Bool
-approvedProject project = year == 2018 && isPrefixOf
+approvedProject :: Integer -> Project -> Bool
+approvedProject compareYear project = year == compareYear && isPrefixOf
   "Iteration"
   (pName project)
   where (year, _, _) = toGregorian $ utctDay (pCreatedAt project)
