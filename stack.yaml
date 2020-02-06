@@ -10,7 +10,6 @@ ghc-options:
     -ddump-hi
     -fhide-source-paths
     -Weverything
-    -Wno-missing-exported-signatures
     -Wno-missed-specialisations
     -Wno-all-missed-specialisations
     -Wno-unsafe
@@ -18,11 +17,5 @@ ghc-options:
     -Wno-missing-local-signatures
     -Wno-monomorphism-restriction
     -Wno-missing-import-lists
-    -Wno-missing-export-lists
-    -Wno-incomplete-uni-patterns
-    -Wno-partial-fields
     -Wno-implicit-prelude
-    -Wno-redundant-constraints
-    -Wno-deriving-typeable
-    -Wno-missing-monadfail-instances
     -fignore-optim-changes

@@ -24,7 +24,7 @@ import RIO
 import Asana.Api.Gid (Gid, textToGid)
 import Control.Monad.IO.Class (liftIO)
 import Data.Semigroup ((<>))
-import LoadEnv
+import LoadEnv (loadEnvFrom)
 import Options.Applicative
   ( Parser
   , auto

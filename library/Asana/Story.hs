@@ -12,7 +12,7 @@ import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Semigroup ((<>))
 import RIO.Text (Text)
 import qualified RIO.Text as T
-import RIO.Time
+import RIO.Time (UTCTime)
 
 data Story = Story
   { sAssignee :: Maybe Named

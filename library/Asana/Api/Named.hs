@@ -6,8 +6,8 @@ module Asana.Api.Named
 import RIO
 
 import Asana.Api.Gid (Gid)
-import Data.Aeson
-import Data.Aeson.Casing
+import Data.Aeson (FromJSON, genericParseJSON, parseJSON)
+import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import RIO.Text (Text)
 
 data Named = Named

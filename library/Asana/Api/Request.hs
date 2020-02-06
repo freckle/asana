@@ -11,13 +11,26 @@ module Asana.Api.Request
 
 import RIO
 
-import Asana.App
+import Asana.App (AppM, appApiAccessKey)
 import Control.Monad (when)
-import Data.Aeson
-import Data.Aeson.Casing
+import Data.Aeson (FromJSON, ToJSON, genericParseJSON, parseJSON)
+import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Network.HTTP.Simple
+  ( JSONException(JSONConversionException, JSONParseException)
+  , Request
+  , Response
+  , addRequestHeader
+  , getResponseBody
+  , getResponseHeader
+  , getResponseStatusCode
+  , httpJSON
+  , httpNoBody
+  , parseRequest
+  , setRequestBodyJSON
+  , setRequestMethod
+  )
 import Prelude (pred)
 import RIO.Text (Text)
 import qualified RIO.Text as T
@@ -115,11 +128,7 @@ addAuthorization :: Text -> Request -> Request
 addAuthorization auth =
   addRequestHeader "Authorization" $ "Bearer " <> T.encodeUtf8 auth
 
-retry
-  :: forall a ext
-   . Int
-  -> AppM ext (Response a)
-  -> AppM ext (Response a)
+retry :: forall a ext . Int -> AppM ext (Response a) -> AppM ext (Response a)
 retry attempt go
   | attempt <= 0 = go
   | otherwise = handler =<< go `catch` handleParseError
