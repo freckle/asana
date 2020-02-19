@@ -33,7 +33,9 @@ main = do
         let url = "<" <> storyUrl projectId story <> ">"
         logInfo . display $ url <> " " <> sName
 
-        let incompleteNoCarry = not sCompleted && isNothing sCarryOver
+        let
+          incompleteNoCarry =
+            not sCompleted && isNothing sCarryOver && maybe True (> 0) sCost
         when incompleteNoCarry
           $ logWarn
           $ "No carry over on incomplete story: "
