@@ -78,3 +78,11 @@ executables:
       - statistics
       - temporary
       - vector
+  update-task:
+    main: Main.hs
+    source-dirs: update-task
+    dependencies:
+      - asana
+      - optparse-applicative
+      - rio
+      - text
