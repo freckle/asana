@@ -1,13 +1,16 @@
 module Asana.Api.Task
   ( Task(..)
   , CustomField(..)
+  , CustomFields(..)
+  , EnumOption(..)
   , Membership(..)
   , TaskStatusFilter(..)
   , ResourceSubtype(..)
   , getTask
   , getProjectTasks
   , getProjectTasksCompletedSince
-  , putEnumField
+  , putCustomField
+  , putCustomFields
   , taskUrl
   ) where
 
@@ -20,19 +23,20 @@ import Asana.App (AppM)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
   ( FromJSON
+  , ToJSON(..)
   , Value(Object)
   , constructorTagModifier
   , defaultOptions
   , genericParseJSON
   , object
   , parseJSON
-  , toJSON
   , withObject
   , (.:)
   , (.:?)
   , (.=)
   )
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
+import Data.List (find)
 import Data.Semigroup ((<>))
 import RIO.Text (Text)
 import qualified RIO.Text as T
@@ -47,22 +51,62 @@ import RIO.Time
 
 -- | Just what we need out of our @custom_fields@ for cost and carry-over
 data CustomField
-  = CustomNumber Text (Maybe Integer)
-  | CustomEnum Text (Maybe Text)
+  = CustomNumber Gid Text (Maybe Integer)
+  | CustomEnum Gid Text [EnumOption] (Maybe Text)
   | Other -- ^ Unexpected types dumped here
   deriving (Eq, Generic, Show)
+
+newtype CustomFields = CustomFields [CustomField]
+
+instance ToJSON CustomFields where
+  toJSON (CustomFields fields) = object $ concatMap toPair fields
+   where
+    toPair = \case
+      CustomNumber gid _ n -> [gidToText gid .= n]
+      e@(CustomEnum gid _ _ _) -> [gidToText gid .= customEnumId e]
+      _ -> []
+
+data EnumOption = EnumOption
+  { eoGid :: Gid
+  , eoName :: Text
+  }
+  deriving (Eq, Generic, Show)
+
+instance FromJSON EnumOption where
+  parseJSON = genericParseJSON $ aesonPrefix snakeCase
+
+-- | Return a @'CustomField'@s value's Enum id, is possible
+--
+-- - Must be a @'CustomEnum'@
+-- - Must have a value
+-- - Must have an option with the same name as that value
+--
+customEnumId :: CustomField -> Maybe Gid
+customEnumId (CustomEnum _ _ opts mValue) = do
+  value <- mValue
+  option <- find ((== value) . eoName) opts
+  pure $ eoGid option
+customEnumId _ = Nothing
 
 instance FromJSON CustomField where
   parseJSON = withObject "CustomField" $ \o -> do
     oType <- o .: "type"
 
     case (oType :: Text) of
-      "number" -> CustomNumber <$> o .: "name" <*> o .: "number_value"
+      "number" ->
+        CustomNumber <$> o .: "gid" <*> o .: "name" <*> o .: "number_value"
       "enum" -> do
         value <- o .: "enum_value"
-        CustomEnum <$> o .: "name" <*> case value of
-          Object vo -> vo .:? "name"
-          _ -> pure Nothing
+        CustomEnum
+          <$> o
+          .: "gid"
+          <*> o
+          .: "name"
+          <*> o
+          .: "enum_options"
+          <*> case value of
+                Object vo -> vo .:? "name"
+                _ -> pure Nothing
       _ -> pure Other
 
 -- | We need to know Section to find "Awaiting Deployment"
@@ -129,12 +173,12 @@ getProjectTasksCompletedSince projectId since = getAllParams
   (T.unpack $ "/projects/" <> gidToText projectId <> "/tasks")
   [("completed_since", formatISO8601 since)]
 
-putEnumField :: Gid -> (Integer, Maybe Integer) -> AppM ext ()
-putEnumField taskId (fieldId, enumId) =
-  put ("/tasks/" <> T.unpack (gidToText taskId)) $ object
-    [ "data"
-        .= object ["custom_fields" .= object [tshow fieldId .= toJSON enumId]]
-    ]
+putCustomField :: Gid -> CustomField -> AppM ext ()
+putCustomField taskId = putCustomFields taskId . CustomFields . pure
+
+putCustomFields :: Gid -> CustomFields -> AppM ext ()
+putCustomFields taskId fields = put ("/tasks/" <> T.unpack (gidToText taskId))
+  $ object ["data" .= object ["custom_fields" .= fields]]
 
 taskUrl :: Task -> Text
 taskUrl Task {..} = "https://app.asana.com/0/0/" <> gidToText tGid <> "/f"

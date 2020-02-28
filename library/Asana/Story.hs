@@ -56,13 +56,13 @@ findNumber :: Text -> [CustomField] -> Maybe Integer
 findNumber field = listToMaybe . mapMaybe cost
  where
   cost = \case
-    (CustomNumber foundField mn) | caseFoldEq field foundField -> mn
+    (CustomNumber _ foundField mn) | caseFoldEq field foundField -> mn
     _ -> Nothing
 
 findYesNo :: Text -> [CustomField] -> Maybe Bool
 findYesNo x = fmap parse . listToMaybe . mapMaybe go
  where
-  go (CustomEnum name mn) | caseFoldEq name x = mn
+  go (CustomEnum _ name _ mn) | caseFoldEq name x = mn
   go _ = Nothing
   parse = (== "Yes")
 
