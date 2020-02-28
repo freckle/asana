@@ -47,3 +47,19 @@ echo "ASANA_API_KEY=<access-token>" >> ~/.env.asana
 - List Bugs completed since we started tracking this information
 - Warn for Bugs lacking this information
 - Report totals for reproduced vs not
+
+### `update-task`
+
+- Update custom field values on a Task
+
+To update the `foo` custom field to 42 on Task 123:
+
+```console
+% update-tasks --set foo:42 123
+```
+
+More than on `--set` option can be given at once.
+
+If `foo` is not a custom field, the update will do nothing. The value `42` will
+be interpreted as a Number or Enum name depending on the type of `foo`, which is
+read from the Task before performing the update.
