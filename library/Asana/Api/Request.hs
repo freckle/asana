@@ -13,7 +13,7 @@ import RIO
 
 import Asana.App (AppM, appApiAccessKey)
 import Control.Monad (when)
-import Data.Aeson (FromJSON, ToJSON, genericParseJSON, parseJSON)
+import Data.Aeson (FromJSON, ToJSON, Value, genericParseJSON, parseJSON)
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
@@ -26,7 +26,6 @@ import Network.HTTP.Simple
   , getResponseHeader
   , getResponseStatusCode
   , httpJSON
-  , httpNoBody
   , parseRequest
   , setRequestBodyJSON
   , setRequestMethod
@@ -114,7 +113,7 @@ put path payload = do
   auth <- asks appApiAccessKey
   request <- parseRequest $ "https://app.asana.com/api/1.0" <> path
 
-  response <- retry 10 $ httpNoBody
+  response <- retry 10 $ httpJSON
     (setRequestMethod "PUT" . setRequestBodyJSON payload $ addAuthorization
       auth
       request
@@ -123,6 +122,8 @@ put path payload = do
     . logWarn
     $ "PUT failed "
     <> display (getResponseStatusCode response)
+    <> " "
+    <> displayShow (getResponseBody @Value response)
 
 addAuthorization :: Text -> Request -> Request
 addAuthorization auth =
