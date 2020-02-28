@@ -24,7 +24,7 @@ module Main (main) where
 import RIO
 
 import Asana.Api
-import Asana.Api.Gid (Gid)
+import Asana.Api.Gid (Gid, textToGid)
 import Asana.App
 import Asana.Story
 import Control.Monad (guard, when)
@@ -106,7 +106,7 @@ main = do
     logDebug "Label actionability"
     pooledForConcurrentlyN_ maxRequests points $ \point@Point {..} -> do
       let actionability = toActionability point
-      putEnumField pGid $ toActionabilityFieldIds actionability
+      putCustomField pGid $ toActionabilityField actionability
       logInfo . fromString $ printf
         "Updated actionability %s %s: %s (%.2fc/%.2fi)"
         pUrl
@@ -125,24 +125,19 @@ midPoints points = (xMid, yMid)
   xMid = xMax - ((xMax - xMin) / 2)
   yMid = yMax - ((yMax - yMin) / 2)
 
-toActionabilityFieldIds :: Priority -> (Integer, Maybe Integer)
-toActionabilityFieldIds = \case
-  ThankLess -> (actionabilityFieldId, Just thanklessEnumId)
-  FillIn -> (actionabilityFieldId, Just fillinEnumId)
-  Quick -> (actionabilityFieldId, Just quickEnumId)
-  Major -> (actionabilityFieldId, Just majorEnumId)
+toActionabilityField :: Priority -> CustomField
+toActionabilityField =
+  CustomEnum actionabilityFieldId "Actionability" actionabilityEnumOptions
+    . Just
+    . tshow
 
-actionabilityFieldId :: Integer
-actionabilityFieldId = 1109768955052831
+actionabilityFieldId :: Gid
+actionabilityFieldId = textToGid "1109768955052831"
 
-thanklessEnumId :: Integer
-thanklessEnumId = 1109768955052832
-
-fillinEnumId :: Integer
-fillinEnumId = 1109768955052833
-
-quickEnumId :: Integer
-quickEnumId = 1109768955052834
-
-majorEnumId :: Integer
-majorEnumId = 1109768955052835
+actionabilityEnumOptions :: [EnumOption]
+actionabilityEnumOptions =
+  [ EnumOption (textToGid "1109768955052832") $ tshow ThankLess
+  , EnumOption (textToGid "1109768955052833") $ tshow FillIn
+  , EnumOption (textToGid "1109768955052834") $ tshow Quick
+  , EnumOption (textToGid "1109768955052835") $ tshow Major
+  ]
