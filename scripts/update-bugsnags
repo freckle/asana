@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+#
+# Find open Busnag errors with linked issues, use update-task to set the events
+# and users custom fields from the current Events and Users count.
+#
+###
+set -eu
+
+get_errors_with_issues() {
+  local project_id="$1"
+  local query=""
+
+  query+="filters[event.since][][type]=eq&"
+  query+="filters[event.since][][value]=all&"
+  query+="filters[app.release_stage][][type]=eq&"
+  query+="filters[app.release_stage][][value]=production&"
+  query+="filters[event.severity][][type]=eq&"
+  query+="filters[event.severity][][value]=error&"
+  query+="filters[error.status][][type]=eq&"
+  query+="filters[error.status][][value]=open&"
+  query+="filters[error.has_issue][][type]=eq&"
+  query+="filters[error.has_issue][][value]=true&"
+  query+="sort=last_seen"
+
+  # || true because we get an exit code 3, even though it works fine :shrug:
+  curl --silent --get --globoff \
+    --header "Accept: application/json" \
+    --header "Authorization: token $BUGSNAG_TOKEN" \
+    --header "Content-type: application/json" \
+    --header "X-Version: 2" \
+    "https://api.bugsnag.com/projects/$project_id/errors?$query" || true
+}
+
+run() {
+  local line task events users
+
+  get_errors_with_issues "$1" |
+    jq --raw-output '.[] | .created_issue.id, .events, .users' |
+    paste -d, - - - |
+    while read -r line; do
+      IFS=, read -r task events users <<<"$line"
+
+      echo "[UPDATE] $task => events:$events, users:$users"
+      stack exec update-task -- \
+        --set "events:$events" \
+        --set "users:$users" \
+        "$task"
+    done
+}
+
+run 5bc5e32b39cb4d0012d594bf # classroom
+run 5beb0207744469000cc717df # console
+run 5a78dc6e328c66001dba481b # fancy-api
+run 5c6582235cb4220017e62660 # jobs
+run 5be9ef0425ec2a0017919aa1 # school
+run 5beb022e119cd10013c19a09 # student
