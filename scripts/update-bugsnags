@@ -42,6 +42,7 @@ run() {
 
       echo "[UPDATE] $task => events:$events, users:$users"
       stack exec update-task -- \
+        --quiet \
         --set "events:$events" \
         --set "users:$users" \
         "$task"
