@@ -85,7 +85,13 @@ loadAppWith parseExt = do
   pure App { .. }
  where
   optParser :: Parser (LogLevel, ext)
-  optParser = (,) <$> flag LevelInfo LevelDebug (long "debug") <*> parseExt
+  optParser =
+    resolveLevel
+      <$> flag Nothing (Just LevelDebug) (long "debug")
+      <*> flag Nothing (Just LevelWarn) (long "quiet")
+      <*> parseExt
+
+  resolveLevel debug quiet ext = (fromMaybe LevelInfo $ quiet <|> debug, ext)
 
 parseIgnoreNoCanDo :: Parser Bool
 parseIgnoreNoCanDo = flag False True (long "ignore-no-can-do")
