@@ -9,6 +9,7 @@ import RIO
 import Asana.Api
 import Asana.Api.Gid (Gid, gidToText)
 import Data.Maybe (listToMaybe, mapMaybe)
+import Data.Scientific (Scientific)
 import Data.Semigroup ((<>))
 import RIO.Text (Text)
 import qualified RIO.Text as T
@@ -38,10 +39,10 @@ fromTask Task {..} = case tResourceSubtype of
     , sName = tName
     , sCompleted = tCompleted || awaitingDeployment
     , sCompletedAt = tCompletedAt
-    , sCost = findNumber "cost" tCustomFields
-    , sImpact = findNumber "impact" tCustomFields
-    , sVirality = findNumber "virality" tCustomFields
-    , sCarryOver = findNumber "carryover" tCustomFields
+    , sCost = findInteger "cost" tCustomFields
+    , sImpact = findInteger "impact" tCustomFields
+    , sVirality = findInteger "virality" tCustomFields
+    , sCarryOver = findInteger "carryover" tCustomFields
     , sCanDo = findYesNo "can do?" tCustomFields
     , sReproduced = findYesNo "Reproduces on seed data?" tCustomFields
     , sGid = tGid
@@ -52,7 +53,10 @@ fromTask Task {..} = case tResourceSubtype of
       Just Named {..} | caseFoldEq nName "Awaiting Deployment" -> True
       _ -> False
 
-findNumber :: Text -> [CustomField] -> Maybe Integer
+findInteger :: Text -> [CustomField] -> Maybe Integer
+findInteger field = fmap round . findNumber field
+
+findNumber :: Text -> [CustomField] -> Maybe Scientific
 findNumber field = listToMaybe . mapMaybe cost
  where
   cost = \case

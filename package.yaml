@@ -39,6 +39,7 @@ library:
     - load-env
     - optparse-applicative
     - rio
+    - scientific
 
 executables:
   bug-reproduction:

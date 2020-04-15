@@ -37,6 +37,7 @@ import Data.Aeson
   )
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import Data.List (find)
+import Data.Scientific (Scientific)
 import Data.Semigroup ((<>))
 import RIO.Text (Text)
 import qualified RIO.Text as T
@@ -51,7 +52,7 @@ import RIO.Time
 
 -- | Just what we need out of our @custom_fields@ for cost and carry-over
 data CustomField
-  = CustomNumber Gid Text (Maybe Integer)
+  = CustomNumber Gid Text (Maybe Scientific)
   | CustomEnum Gid Text [EnumOption] (Maybe Text)
   | Other -- ^ Unexpected types dumped here
   deriving (Eq, Generic, Show)

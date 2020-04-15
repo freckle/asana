@@ -65,7 +65,7 @@ updatePlanningPokerTaskCost projectTaskMap planningPokerTask@PlanningPokerTask {
 
       Just task@Task {..} -> case extractCostField task of
         Just (CustomNumber costFieldGid _ _) -> do
-          putCustomField tGid $ CustomNumber costFieldGid "cost" (Just cost)
+          putCustomField tGid $ CustomNumber costFieldGid "cost" (Just $ fromIntegral cost)
 
           logInfo
             $ planningPokerTaskLog planningPokerTask
@@ -158,7 +158,7 @@ fetchPlanningPokerTask Named {..} = do
 
 extractCost :: Task -> Maybe Integer
 extractCost t = extractCostField t >>= \case
-  CustomNumber _ _ mCost -> mCost
+  CustomNumber _ _ mCost -> round <$> mCost
   _ -> Nothing
 
 extractCostField :: Task -> Maybe CustomField
