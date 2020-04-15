@@ -148,7 +148,13 @@ instance DefaultOrdered PlanningPokerTask where
 fetchPlanningPokerTask :: Named -> AppM ext PlanningPokerTask
 fetchPlanningPokerTask Named {..} = do
   task@Task {..} <- getTask nGid
-  pure $ PlanningPokerTask tGid tName tNotes "" $ extractCost task
+  pure $ PlanningPokerTask
+    { issueKey = tGid
+    , summary = tName
+    , description = tNotes
+    , acceptanceCriteria = ""
+    , storyPoints = extractCost task
+    }
 
 extractCost :: Task -> Maybe Integer
 extractCost t = extractCostField t >>= \case
