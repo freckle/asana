@@ -86,3 +86,12 @@ executables:
       - optparse-applicative
       - rio
       - text
+  planning-poker:
+    main: Main.hs
+    source-dirs: planning-poker
+    dependencies:
+      - asana
+      - rio
+      - text
+      - cassava
+      - safe

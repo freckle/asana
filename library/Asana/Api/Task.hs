@@ -136,6 +136,7 @@ data Task = Task
   , tMemberships :: [Membership]
   , tGid :: Gid
   , tResourceSubtype :: ResourceSubtype
+  , tNotes :: Text
   }
   deriving (Eq, Generic, Show)
 

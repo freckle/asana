@@ -17,6 +17,7 @@ module Asana.App
   , parseProjectId
   , parseBugProjectId
   , parseYear
+  , parseImport
   ) where
 
 import RIO
@@ -109,3 +110,6 @@ parseBugProjectId =
 
 parseYear :: Parser Integer
 parseYear = option auto (long "year" <> help "The year to view")
+
+parseImport :: Parser (Maybe FilePath)
+parseImport = optional (strOption (long "import" <> help "CSV File to import"))

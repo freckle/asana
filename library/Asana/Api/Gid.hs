@@ -12,7 +12,7 @@ import RIO.Text (Text)
 
 newtype Gid = Gid { gidToText :: Text }
   deriving (Eq, Generic, Show)
-  deriving newtype (FromJSON, ToJSON)
+  deriving newtype (FromJSON, ToJSON, Hashable)
 
 textToGid :: Text -> Gid
 textToGid = Gid
