@@ -91,9 +91,7 @@ executables:
     source-dirs: planning-poker
     dependencies:
       - asana
-      - optparse-applicative
       - rio
       - text
-      - transformers
       - cassava
       - safe
