@@ -55,7 +55,7 @@ echo "ASANA_API_KEY=<access-token>" >> ~/.env.asana
 To update the `foo` custom field to 42 on Task 123:
 
 ```console
-% update-tasks --set foo:42 123
+% update-task --set foo:42 123
 ```
 
 More than one `--set` option can be given at once.
