@@ -6,8 +6,10 @@ import Asana.Api
 import Asana.Api.Gid
 import Asana.App
 import Data.Csv
+import qualified Data.Text
 import qualified RIO.ByteString.Lazy as RBSL
 import qualified RIO.HashMap as HashMap
+import RIO.List (sortOn)
 import qualified RIO.Text as T
 import Safe (headMay)
 
@@ -28,13 +30,19 @@ main = do
 exportProjectTasks :: Gid -> AppM AppExt ()
 exportProjectTasks projectId = do
   projectTasks <- getProjectTasks projectId AllTasks
-  tasks <- pooledForConcurrentlyN
-    maxRequests
-    projectTasks
-    fetchPlanningPokerTask
+
+  tasks <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
+
+  let planningPokerTasks = map toPlanningPokerTask (sortByPriority tasks)
+
   liftIO
     . RBSL.writeFile "planning-poker-export.csv"
-    $ encodeDefaultOrderedByName tasks
+    $ encodeDefaultOrderedByName planningPokerTasks
+
+  for_ planningPokerTasks $ \task -> logInfo $ planningPokerTaskLog
+    summary
+    task
+    "exported to planning-poker-export.csv"
 
 importProjectTasksFromFile :: FilePath -> Gid -> AppM AppExt ()
 importProjectTasksFromFile file projectId = do
@@ -56,31 +64,38 @@ updatePlanningPokerTaskCost
 updatePlanningPokerTaskCost projectTaskMap planningPokerTask@PlanningPokerTask {..}
   = case storyPoints of
     Nothing -> logInfo $ planningPokerTaskLog
+      planningPokerSummaryFromTaskLink
       planningPokerTask
       "Does not have a cost. Skipping import."
     Just cost -> case HashMap.lookup issueKey projectTaskMap of
       Nothing -> logWarn $ planningPokerTaskLog
+        planningPokerSummaryFromTaskLink
         planningPokerTask
         "Not found in project. Skipping import."
 
       Just task@Task {..} -> case extractCostField task of
         Just (CustomNumber costFieldGid _ _) -> do
-          putCustomField tGid $ CustomNumber costFieldGid "cost" (Just $ fromIntegral cost)
+          putCustomField tGid
+            $ CustomNumber costFieldGid "cost" (Just $ fromIntegral cost)
 
           logInfo
-            $ planningPokerTaskLog planningPokerTask
+            $ planningPokerTaskLog
+                planningPokerSummaryFromTaskLink
+                planningPokerTask
             $ "cost was updated to "
             <> T.pack (show cost)
 
         _ -> logWarn $ planningPokerTaskLog
+          planningPokerSummaryFromTaskLink
           planningPokerTask
           "No 'cost' field.  Skipping import."
 
-planningPokerTaskLog :: PlanningPokerTask -> T.Text -> Utf8Builder
-planningPokerTaskLog task message =
+planningPokerTaskLog
+  :: (PlanningPokerTask -> Text) -> PlanningPokerTask -> T.Text -> Utf8Builder
+planningPokerTaskLog format task message =
   fromText
     $ "Task \""
-    <> planningPokerSummaryFromTaskLink task
+    <> format task
     <> "\" <"
     <> planningPokerTaskUrl task
     <> ">: "
@@ -115,10 +130,14 @@ instance ToNamedRecord PlanningPokerTask where
   toNamedRecord task@PlanningPokerTask {..} = namedRecord
     [ "Issue Key" .= toField (gidToText issueKey)
     , "Summary" .= toField (planningPokerTaskLink task)
-    , "Description" .= toField description
-    , "Acceptance Criteria" .= toField acceptanceCriteria
+    , "Description" .= toField (formatForPlanningPoker description)
+    , "Acceptance Criteria"
+      .= toField (formatForPlanningPoker acceptanceCriteria)
     , "Story Points" .= toField storyPoints
     ]
+
+formatForPlanningPoker :: Text -> Text
+formatForPlanningPoker = Data.Text.replace "\n" "<br/>"
 
 planningPokerTaskLink :: PlanningPokerTask -> T.Text
 planningPokerTaskLink task@PlanningPokerTask {..} =
@@ -145,16 +164,27 @@ instance DefaultOrdered PlanningPokerTask where
     , "Story Points"
     ]
 
-fetchPlanningPokerTask :: Named -> AppM ext PlanningPokerTask
-fetchPlanningPokerTask Named {..} = do
-  task@Task {..} <- getTask nGid
-  pure $ PlanningPokerTask
-    { issueKey = tGid
-    , summary = tName
-    , description = tNotes
-    , acceptanceCriteria = ""
-    , storyPoints = extractCost task
-    }
+toPlanningPokerTask :: Task -> PlanningPokerTask
+toPlanningPokerTask task@Task {..} = PlanningPokerTask
+  { issueKey = tGid
+  , summary = tName
+  , description = T.unlines
+    [ "<b>Priority:</b> " <> tshow (fromMaybe 0 (extractPriority task))
+    , "<b>Projects</b>"
+    , describeMemberships tMemberships
+    , "<b>Description</b>"
+    , tNotes
+    ]
+  , acceptanceCriteria = ""
+  , storyPoints = extractCost task
+  }
+
+describeMemberships = ul . mconcat . map describeMembership
+ where
+  ul text = "<ul>" <> text <> "</ul>"
+  li text = "<li>" <> text <> "</li>"
+  describeMembership Membership {..} =
+    li $ nName mProject <> maybe "" ((": " <>) . nName) mSection
 
 extractCost :: Task -> Maybe Integer
 extractCost t = extractCostField t >>= \case
@@ -164,4 +194,17 @@ extractCost t = extractCostField t >>= \case
 extractCostField :: Task -> Maybe CustomField
 extractCostField Task {..} = headMay $ flip mapMaybe tCustomFields $ \case
   customField@(CustomNumber _ "cost" _) -> Just customField
+  _ -> Nothing
+
+sortByPriority :: [Task] -> [Task]
+sortByPriority = sortOn (Down . extractPriority)
+
+extractPriority :: Task -> Maybe Integer
+extractPriority t = extractPriorityField t >>= \case
+  CustomNumber _ _ mPriority -> round <$> mPriority
+  _ -> Nothing
+
+extractPriorityField :: Task -> Maybe CustomField
+extractPriorityField Task {..} = headMay $ flip mapMaybe tCustomFields $ \case
+  customField@(CustomNumber _ "Priority" _) -> Just customField
   _ -> Nothing
