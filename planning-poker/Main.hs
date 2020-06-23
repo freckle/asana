@@ -61,34 +61,31 @@ importProjectTasksFromFile file projectId = do
 
 updatePlanningPokerTaskCost
   :: HashMap Gid Task -> PlanningPokerTask -> AppM AppExt ()
-updatePlanningPokerTaskCost projectTaskMap planningPokerTask@PlanningPokerTask {..}
-  = case storyPoints of
-    Nothing -> logInfo $ planningPokerTaskLog
-      planningPokerSummaryFromTaskLink
-      planningPokerTask
-      "Does not have a cost. Skipping import."
-    Just cost -> case HashMap.lookup issueKey projectTaskMap of
-      Nothing -> logWarn $ planningPokerTaskLog
-        planningPokerSummaryFromTaskLink
-        planningPokerTask
-        "Not found in project. Skipping import."
+updatePlanningPokerTaskCost projectTaskMap task = case storyPoints task of
+  Nothing -> logInfo $ planningPokerTaskLog
+    summary
+    task
+    "Does not have a cost. Skipping import."
+  Just cost -> case HashMap.lookup (issueKey task) projectTaskMap of
+    Nothing -> logWarn $ planningPokerTaskLog
+      summary
+      task
+      "Not found in project. Skipping import."
 
-      Just task@Task {..} -> case extractCostField task of
-        Just (CustomNumber costFieldGid _ _) -> do
-          putCustomField tGid
-            $ CustomNumber costFieldGid "cost" (Just $ fromIntegral cost)
+    Just asanaTask@Task {..} -> case extractCostField asanaTask of
+      Just (CustomNumber costFieldGid _ _) -> do
+        putCustomField tGid
+          $ CustomNumber costFieldGid "cost" (Just $ fromIntegral cost)
 
-          logInfo
-            $ planningPokerTaskLog
-                planningPokerSummaryFromTaskLink
-                planningPokerTask
-            $ "cost was updated to "
-            <> T.pack (show cost)
+        logInfo
+          $ planningPokerTaskLog summary task
+          $ "cost was updated to "
+          <> T.pack (show cost)
 
-        _ -> logWarn $ planningPokerTaskLog
-          planningPokerSummaryFromTaskLink
-          planningPokerTask
-          "No 'cost' field.  Skipping import."
+      _ -> logWarn $ planningPokerTaskLog
+        summary
+        task
+        "No 'cost' field.  Skipping import."
 
 planningPokerTaskLog
   :: (PlanningPokerTask -> Text) -> PlanningPokerTask -> T.Text -> Utf8Builder
@@ -123,13 +120,12 @@ instance FromNamedRecord PlanningPokerTask where
       .: "Description"
       <*> m
       .: "Acceptance Criteria"
-      <*> m
-      .: "Story Points"
+      <*> (m .: "Story Points" <|> pure Nothing)
 
 instance ToNamedRecord PlanningPokerTask where
-  toNamedRecord task@PlanningPokerTask {..} = namedRecord
+  toNamedRecord PlanningPokerTask {..} = namedRecord
     [ "Issue Key" .= toField (gidToText issueKey)
-    , "Summary" .= toField (planningPokerTaskLink task)
+    , "Summary" .= summary
     , "Description" .= toField (formatForPlanningPoker description)
     , "Acceptance Criteria"
       .= toField (formatForPlanningPoker acceptanceCriteria)
@@ -138,18 +134,6 @@ instance ToNamedRecord PlanningPokerTask where
 
 formatForPlanningPoker :: Text -> Text
 formatForPlanningPoker = Data.Text.replace "\n" "<br/>"
-
-planningPokerTaskLink :: PlanningPokerTask -> T.Text
-planningPokerTaskLink task@PlanningPokerTask {..} =
-  "<a href='" <> planningPokerTaskUrl task <> "'> " <> summary <> "</a>"
-
--- | Undo formatting of planning poker task link to extract summary
-planningPokerSummaryFromTaskLink :: PlanningPokerTask -> T.Text
-planningPokerSummaryFromTaskLink task@PlanningPokerTask {..} =
-  dropLast 4 $ T.drop
-    (T.length $ "<a href='" <> planningPokerTaskUrl task <> "'> ")
-    summary
-  where dropLast n t = T.take (T.length t - n) t
 
 planningPokerTaskUrl :: PlanningPokerTask -> T.Text
 planningPokerTaskUrl PlanningPokerTask {..} =
@@ -169,7 +153,8 @@ toPlanningPokerTask task@Task {..} = PlanningPokerTask
   { issueKey = tGid
   , summary = tName
   , description = T.unlines
-    [ "<b>Priority:</b> " <> tshow (fromMaybe 0 (extractPriority task))
+    [ "<a href='" <> taskUrl task <> "'>" <> tName <> "</a>"
+    , "<b>Priority:</b> " <> tshow (fromMaybe 0 (extractPriority task))
     , "<b>Projects</b>"
     , describeMemberships tMemberships
     , "<b>Description</b>"
