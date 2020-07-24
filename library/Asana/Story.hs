@@ -26,6 +26,7 @@ data Story = Story
   , sCarryOver :: Maybe Integer
   , sCanDo :: Maybe Bool
   , sReproduced :: Maybe Bool
+  , sCapitalized :: Bool
   , sGid :: Gid
   }
   deriving Show
@@ -45,6 +46,7 @@ fromTask Task {..} = case tResourceSubtype of
     , sCarryOver = findInteger "carryover" tCustomFields
     , sCanDo = findYesNo "can do?" tCustomFields
     , sReproduced = findYesNo "Reproduces on seed data?" tCustomFields
+    , sCapitalized = fromMaybe False $ findYesNo "cap?" tCustomFields
     , sGid = tGid
     }
  where
@@ -68,7 +70,7 @@ findYesNo x = fmap parse . listToMaybe . mapMaybe go
  where
   go (CustomEnum _ name _ mn) | caseFoldEq name x = mn
   go _ = Nothing
-  parse = (== "Yes")
+  parse str = str == "Yes" || str == "Y"
 
 caseFoldEq :: Text -> Text -> Bool
 caseFoldEq x y = T.toCaseFold x == T.toCaseFold y
