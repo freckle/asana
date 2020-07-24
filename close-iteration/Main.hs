@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Main (main) where
 
 import RIO
@@ -45,36 +47,69 @@ main = do
           (True, Pessimistic) -> story { sCarryOver = sCost }
           (_, _) -> story
 
-    let
-      isCarried = isJust . sCarryOver
-      (completedAndCarriedStories, incompleteStories) =
-        partition sCompleted stories
-
-      (carriedStories, completedStories) =
-        partition isCarried completedAndCarriedStories
-      completedCost = sum $ mapMaybe sCost completedStories
-      completedCarryOver = sum $ mapMaybe sCarryOver carriedStories
-
-      incompleteCost = sum $ mapMaybe sCost incompleteStories
-      incompleteCarryOver = sum $ mapMaybe sCarryOver incompleteStories
-
-    hPutBuilder stdout . getUtf8Builder $ foldMap
+    let capitalizedStats = statStories $ filter sCapitalized stories
+    hPutBuilder stdout $ getUtf8Builder $ foldMap
       ("\n" <>)
-      [ "Completed"
-      , "- new points: " <> display completedCost
-      , "- carried over points: " <> display completedCarryOver
-      , "- new stories: " <> display (length completedStories)
-      , "- carried over stories: " <> display (length carriedStories)
-      , "Incomplete"
-      , "- points completed: " <> display (incompleteCost - incompleteCarryOver)
-      , "- carry over points: " <> display incompleteCarryOver
-      , "- carry over stories: " <> display (length incompleteStories)
-      , ""
-      , display
-        (completedCost
-        + completedCarryOver
-        + (incompleteCost - incompleteCarryOver)
-        )
-      <> " / "
-      <> display (completedCost + completedCarryOver + incompleteCost)
+      [ "Capitalized"
+      , "- " <> display (completed capitalizedStats) <> " / " <> display
+        (commitment capitalizedStats)
       ]
+    printStats $ statStories stories
+
+printStats :: MonadIO m => CompletionStats -> m ()
+printStats stats@CompletionStats {..} =
+  hPutBuilder stdout $ getUtf8Builder $ foldMap
+    ("\n" <>)
+    [ "Completed"
+    , "- new points: " <> display completedNewCost
+    , "- carried over points: " <> display completedCarryOver
+    , "- new stories: " <> display completedNewCount
+    , "- carried over stories: " <> display carriedCount
+    , "Incomplete"
+    , "- points completed: " <> display (incompleteCost - incompleteCarryOver)
+    , "- carry over points: " <> display incompleteCarryOver
+    , "- carry over stories: " <> display incompleteCount
+    , ""
+    , display (completed stats) <> " / " <> display (commitment stats)
+    ]
+
+completed :: CompletionStats -> Integer
+completed CompletionStats {..} =
+  completedNewCost + completedCarryOver + (incompleteCost - incompleteCarryOver)
+
+commitment :: CompletionStats -> Integer
+commitment CompletionStats {..} =
+  completedNewCost + completedCarryOver + incompleteCost
+
+statStories :: [Story] -> CompletionStats
+statStories stories = CompletionStats
+  { completedNewCost
+  , completedCarryOver
+  , incompleteCost
+  , incompleteCarryOver
+  , completedNewCount = length completedStories
+  , carriedCount = length carriedStories
+  , incompleteCount = length incompleteStories
+  }
+ where
+  isCarried = isJust . sCarryOver
+  (completedAndCarriedStories, incompleteStories) =
+    partition sCompleted stories
+
+  (carriedStories, completedStories) =
+    partition isCarried completedAndCarriedStories
+  completedNewCost = sum $ mapMaybe sCost completedStories
+  completedCarryOver = sum $ mapMaybe sCarryOver carriedStories
+
+  incompleteCost = sum $ mapMaybe sCost incompleteStories
+  incompleteCarryOver = sum $ mapMaybe sCarryOver incompleteStories
+
+data CompletionStats = CompletionStats
+  { completedNewCount :: Int
+  , carriedCount :: Int
+  , incompleteCount :: Int
+  , completedNewCost :: Integer
+  , completedCarryOver :: Integer
+  , incompleteCost :: Integer
+  , incompleteCarryOver :: Integer
+  }
