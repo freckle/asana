@@ -1,0 +1,46 @@
+cradle:
+  stack:
+    - path: "./library"
+      component: "asana:lib"
+
+    - path: "./bug-reproduction/Main.hs"
+      component: "asana:exe:bug-reproduction"
+
+    - path: "./bug-reproduction/Paths_asana.hs"
+      component: "asana:exe:bug-reproduction"
+
+    - path: "./close-iteration/Main.hs"
+      component: "asana:exe:close-iteration"
+
+    - path: "./close-iteration/Paths_asana.hs"
+      component: "asana:exe:close-iteration"
+
+    - path: "./cycle-time/Main.hs"
+      component: "asana:exe:cycle-time"
+
+    - path: "./cycle-time/Paths_asana.hs"
+      component: "asana:exe:cycle-time"
+
+    - path: "./debt-evaluation/Main.hs"
+      component: "asana:exe:debt-evaluation"
+
+    - path: "./debt-evaluation/Paths_asana.hs"
+      component: "asana:exe:debt-evaluation"
+
+    - path: "./planning-poker/Main.hs"
+      component: "asana:exe:planning-poker"
+
+    - path: "./planning-poker/Paths_asana.hs"
+      component: "asana:exe:planning-poker"
+
+    - path: "./start-iteration/Main.hs"
+      component: "asana:exe:start-iteration"
+
+    - path: "./start-iteration/Paths_asana.hs"
+      component: "asana:exe:start-iteration"
+
+    - path: "./update-task/Main.hs"
+      component: "asana:exe:update-task"
+
+    - path: "./update-task/Paths_asana.hs"
+      component: "asana:exe:update-task"
