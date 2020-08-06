@@ -1,5 +1,3 @@
-
-
 module Main (main) where
 
 import RIO
@@ -146,13 +144,13 @@ statStories = foldMap storyStats1
 
 storyStats1 :: Story -> CompletionStats
 storyStats1 Story {..} = CompletionStats
-  { completedNewCost = if isNew && sCompleted then cost else mempty
-  , completedCarryOver = if wasCarried && sCompleted then carryIn else mempty
-  , incompleteCost = if not sCompleted then remainingCost else mempty
+  { completedNewCost = isNew && sCompleted `implies` cost
+  , completedCarryOver = wasCarried && sCompleted `implies` carryIn
+  , incompleteCost = not sCompleted `implies` remainingCost
   , incompleteCarryOver = carryOut
-  , completedNewCount = if sCompleted && isNew then 1 else mempty
-  , carriedCount = if willCarry then 1 else mempty
-  , incompleteCount = if not sCompleted then 1 else mempty
+  , completedNewCount = sCompleted && isNew `implies` 1
+  , carriedCount = willCarry `implies` 1
+  , incompleteCount = not sCompleted `implies` 1
   }
  where
   isNew = isNothing sCarryIn
@@ -195,3 +193,7 @@ extractPointsCompletedField Task {..} =
   headMay $ flip mapMaybe tCustomFields $ \case
     customField@(CustomNumber _ "points completed" _) -> Just customField
     _ -> Nothing
+
+infixl 1 `implies`
+implies :: Monoid m => Bool -> m -> m
+implies predicate a = if predicate then a else mempty
