@@ -38,7 +38,8 @@ main = do
         let
           incompleteNoCarry =
             not sCompleted
-              && (isNothing sCarryOver && isNothing sCarryOut)
+              && isNothing sCarryOver
+              && isNothing sCarryOut
               && maybe True (> 0) sCost
 
         when incompleteNoCarry
@@ -79,7 +80,7 @@ updateCompletedPoints projectId tasks =
         mCompletedPoints = case (sCompleted, sCarryIn, sCarryOut) of
           (True, Nothing, _) -> sCost
           (True, Just carryIn, _) -> Just carryIn
-          (False, _, Just carryOut) -> (-) <$> sCost <*> Just carryOut
+          (False, _, Just carryOut) -> subtract carryOut <$> sCost
           _ -> Nothing
 
       case mCompletedPoints of
