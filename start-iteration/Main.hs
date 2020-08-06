@@ -52,12 +52,14 @@ main = do
           Just _ -> mayCanDo story
 
     let
-      isCarried = isJust . sCarryOver
+      isCarried Story {..} = isJust sCarryOver || isJust sCarryOut
       (carriedStories, iterationStories) = partition isCarried stories
       iterationCost = sum $ mapMaybe sCost iterationStories
       iterationNum = length iterationStories
-      carriedCost = sum $ mapMaybe sCarryOver carriedStories
+      carriedCost =
+        sum $ mapMaybe (\s -> sCarryOver s <|> sCarryOut s) carriedStories
       carriedNum = length carriedStories
+
     hPutBuilder stdout . getUtf8Builder $ foldMap
       ("\n" <>)
       [ "New Story Points"

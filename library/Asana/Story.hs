@@ -24,6 +24,8 @@ data Story = Story
   , sVirality :: Maybe Integer
   , sImpact :: Maybe Integer
   , sCarryOver :: Maybe Integer
+  , sCarryIn :: Maybe Integer
+  , sCarryOut :: Maybe Integer
   , sCanDo :: Maybe Bool
   , sReproduced :: Maybe Bool
   , sCapitalized :: Bool
@@ -44,6 +46,8 @@ fromTask Task {..} = case tResourceSubtype of
     , sImpact = findInteger "impact" tCustomFields
     , sVirality = findInteger "virality" tCustomFields
     , sCarryOver = findInteger "carryover" tCustomFields
+    , sCarryIn = findInteger "carry in" tCustomFields
+    , sCarryOut = findInteger "carry out" tCustomFields
     , sCanDo = findYesNo "can do?" tCustomFields
     , sReproduced = findYesNo "Reproduces on seed data?" tCustomFields
     , sCapitalized = fromMaybe False $ findYesNo "cap?" tCustomFields
