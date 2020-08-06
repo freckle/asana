@@ -40,6 +40,7 @@ library:
     - optparse-applicative
     - rio
     - scientific
+    - safe
 
 executables:
   bug-reproduction:
@@ -97,4 +98,3 @@ executables:
       - rio
       - text
       - cassava
-      - safe

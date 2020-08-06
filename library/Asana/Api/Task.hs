@@ -12,6 +12,8 @@ module Asana.Api.Task
   , putCustomField
   , putCustomFields
   , taskUrl
+  , extractNumberField
+  , extractEnumField
   ) where
 
 import RIO
@@ -49,6 +51,7 @@ import RIO.Time
   , getCurrentTime
   , iso8601DateFormat
   )
+import Safe (headMay)
 
 -- | Just what we need out of our @custom_fields@ for cost and carry-over
 data CustomField
@@ -184,3 +187,17 @@ putCustomFields taskId fields = put ("/tasks/" <> T.unpack (gidToText taskId))
 
 taskUrl :: Task -> Text
 taskUrl Task {..} = "https://app.asana.com/0/0/" <> gidToText tGid <> "/f"
+
+extractNumberField :: Text -> Task -> Maybe CustomField
+extractNumberField fieldName Task {..} =
+  headMay $ flip mapMaybe tCustomFields $ \case
+    customField@(CustomNumber _ t _) ->
+      if t == fieldName then Just customField else Nothing
+    _ -> Nothing
+
+extractEnumField :: Text -> Task -> Maybe CustomField
+extractEnumField fieldName Task {..} =
+  headMay $ flip mapMaybe tCustomFields $ \case
+    customField@(CustomEnum _ t _ _) ->
+      if t == fieldName then Just customField else Nothing
+    _ -> Nothing

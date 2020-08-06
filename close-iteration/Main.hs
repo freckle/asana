@@ -91,7 +91,8 @@ updateCompletedPoints projectId tasks =
             <> storyUrl projectId story
             <> ">"
         Just completedPoints -> do
-          let mPointsCompletedField = extractPointsCompletedField task
+          let
+            mPointsCompletedField = extractNumberField "points completed" task
           case mPointsCompletedField of
             Nothing ->
               logWarn
@@ -188,12 +189,6 @@ readBool :: String -> Bool
 readBool str = case map toLower str of
   'y' : _ -> True
   _ -> False
-
-extractPointsCompletedField :: Task -> Maybe CustomField
-extractPointsCompletedField Task {..} =
-  headMay $ flip mapMaybe tCustomFields $ \case
-    customField@(CustomNumber _ "points completed" _) -> Just customField
-    _ -> Nothing
 
 infixl 1 `implies`
 implies :: Monoid m => Bool -> m -> m
