@@ -74,7 +74,7 @@ updateCompletedPoints :: Gid -> [Task] -> AppM AppExt ()
 updateCompletedPoints projectId tasks =
   pooledForConcurrentlyN_ maxRequests tasks $ \task -> do
     let mStory = fromTask task
-    for_ mStory $ \story@(Story {..}) -> do
+    for_ mStory $ \story@Story {..} -> do
       let
         mCompletedPoints = case (sCompleted, sCarryIn, sCarryOut) of
           (True, Nothing, _) -> sCost
