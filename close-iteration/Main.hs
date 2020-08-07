@@ -7,12 +7,9 @@ import Asana.Api.Gid (Gid)
 import Asana.App
 import Asana.Story
 import Control.Monad (when)
-import Data.Char (toLower)
 import Data.Maybe (isJust, isNothing)
 import Data.Semigroup (Sum(..), (<>))
 import Data.Semigroup.Generic (gmappend, gmempty)
-import Safe (headMay)
-import System.IO (getLine, putStr)
 
 data AppExt = AppExt
   { appProjectId :: Gid
@@ -111,7 +108,7 @@ updateCompletedPoints projectId tasks =
                   <> display (storyUrl projectId story)
                   <> " to "
                   <> display completedPoints
-              _ -> logWarn "'points completed' field has incorrect type."
+              _ -> error "impossible"
 
 printStats :: MonadIO m => CompletionStats -> m ()
 printStats stats@CompletionStats {..} =
@@ -178,17 +175,6 @@ instance Semigroup CompletionStats where
 
 instance Monoid CompletionStats where
   mempty = gmempty
-
-promptWith :: MonadIO m => (String -> b) -> String -> m b
-promptWith readVar var = liftIO $ do
-  putStr $ var <> ": "
-  hFlush stdout
-  readVar <$> getLine
-
-readBool :: String -> Bool
-readBool str = case map toLower str of
-  'y' : _ -> True
-  _ -> False
 
 infixl 1 `implies`
 implies :: Monoid m => Bool -> m -> m
