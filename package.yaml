@@ -40,7 +40,6 @@ library:
     - optparse-applicative
     - rio
     - scientific
-    - safe
 
 executables:
   bug-reproduction:

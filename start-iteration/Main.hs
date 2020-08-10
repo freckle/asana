@@ -107,9 +107,7 @@ updateCommitment projectId task = do
   let mStory = fromTask task
   for_ mStory $ \story@Story {..} -> do
     let
-      mCommitment = case sCarryIn of
-        Nothing -> sCost
-        Just carryIn -> Just carryIn
+      mCommitment = sCarryIn <|> sCost
       mCommitmentField = extractNumberField "commitment" task
 
     case mCommitmentField of

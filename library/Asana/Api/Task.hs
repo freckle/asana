@@ -51,7 +51,6 @@ import RIO.Time
   , getCurrentTime
   , iso8601DateFormat
   )
-import Safe (headMay)
 
 -- | Just what we need out of our @custom_fields@ for cost and carry-over
 data CustomField
@@ -190,14 +189,13 @@ taskUrl Task {..} = "https://app.asana.com/0/0/" <> gidToText tGid <> "/f"
 
 extractNumberField :: Text -> Task -> Maybe CustomField
 extractNumberField fieldName Task {..} =
-  headMay $ flip mapMaybe tCustomFields $ \case
-    customField@(CustomNumber _ t _) ->
-      if t == fieldName then Just customField else Nothing
+  listToMaybe $ flip mapMaybe tCustomFields $ \case
+    customField@(CustomNumber _ t _) -> customField <$ guard (t == fieldName)
     _ -> Nothing
 
 extractEnumField :: Text -> Task -> Maybe CustomField
 extractEnumField fieldName Task {..} =
-  headMay $ flip mapMaybe tCustomFields $ \case
+  listToMaybe $ flip mapMaybe tCustomFields $ \case
     customField@(CustomEnum _ t _ _) ->
       if t == fieldName then Just customField else Nothing
     _ -> Nothing
