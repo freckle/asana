@@ -12,6 +12,8 @@ module Asana.Api.Task
   , putCustomField
   , putCustomFields
   , taskUrl
+  , extractNumberField
+  , extractEnumField
   ) where
 
 import RIO
@@ -184,3 +186,16 @@ putCustomFields taskId fields = put ("/tasks/" <> T.unpack (gidToText taskId))
 
 taskUrl :: Task -> Text
 taskUrl Task {..} = "https://app.asana.com/0/0/" <> gidToText tGid <> "/f"
+
+extractNumberField :: Text -> Task -> Maybe CustomField
+extractNumberField fieldName Task {..} =
+  listToMaybe $ flip mapMaybe tCustomFields $ \case
+    customField@(CustomNumber _ t _) -> customField <$ guard (t == fieldName)
+    _ -> Nothing
+
+extractEnumField :: Text -> Task -> Maybe CustomField
+extractEnumField fieldName Task {..} =
+  listToMaybe $ flip mapMaybe tCustomFields $ \case
+    customField@(CustomEnum _ t _ _) ->
+      if t == fieldName then Just customField else Nothing
+    _ -> Nothing

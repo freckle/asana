@@ -11,7 +11,6 @@ import qualified RIO.ByteString.Lazy as RBSL
 import qualified RIO.HashMap as HashMap
 import RIO.List (sortOn)
 import qualified RIO.Text as T
-import Safe (headMay)
 
 data AppExt = AppExt
   { appProjectId :: Gid
@@ -72,7 +71,7 @@ updatePlanningPokerTaskCost projectTaskMap task = case storyPoints task of
       task
       "Not found in project. Skipping import."
 
-    Just asanaTask@Task {..} -> case extractCostField asanaTask of
+    Just asanaTask@Task {..} -> case extractNumberField "cost" asanaTask of
       Just (CustomNumber costFieldGid _ _) -> do
         putCustomField tGid
           $ CustomNumber costFieldGid "cost" (Just $ fromIntegral cost)
@@ -172,24 +171,14 @@ describeMemberships = ul . mconcat . map describeMembership
     li $ nName mProject <> maybe "" ((": " <>) . nName) mSection
 
 extractCost :: Task -> Maybe Integer
-extractCost t = extractCostField t >>= \case
+extractCost t = extractNumberField "cost" t >>= \case
   CustomNumber _ _ mCost -> round <$> mCost
-  _ -> Nothing
-
-extractCostField :: Task -> Maybe CustomField
-extractCostField Task {..} = headMay $ flip mapMaybe tCustomFields $ \case
-  customField@(CustomNumber _ "cost" _) -> Just customField
   _ -> Nothing
 
 sortByPriority :: [Task] -> [Task]
 sortByPriority = sortOn (Down . extractPriority)
 
 extractPriority :: Task -> Maybe Integer
-extractPriority t = extractPriorityField t >>= \case
+extractPriority t = extractNumberField "Priority" t >>= \case
   CustomNumber _ _ mPriority -> round <$> mPriority
-  _ -> Nothing
-
-extractPriorityField :: Task -> Maybe CustomField
-extractPriorityField Task {..} = headMay $ flip mapMaybe tCustomFields $ \case
-  customField@(CustomNumber _ "Priority" _) -> Just customField
   _ -> Nothing

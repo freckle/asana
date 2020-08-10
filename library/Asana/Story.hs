@@ -21,6 +21,7 @@ data Story = Story
   , sCompleted :: Bool
   , sCompletedAt :: Maybe UTCTime
   , sCost :: Maybe Integer
+  , sCommitment :: Maybe Integer
   , sVirality :: Maybe Integer
   , sImpact :: Maybe Integer
   , sCarryOver :: Maybe Integer
@@ -43,6 +44,7 @@ fromTask Task {..} = case tResourceSubtype of
     , sCompleted = tCompleted || awaitingDeployment
     , sCompletedAt = tCompletedAt
     , sCost = findInteger "cost" tCustomFields
+    , sCommitment = findInteger "commitment" tCustomFields
     , sImpact = findInteger "impact" tCustomFields
     , sVirality = findInteger "virality" tCustomFields
     , sCarryOver = findInteger "carryover" tCustomFields

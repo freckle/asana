@@ -56,7 +56,6 @@ executables:
       - asana
       - rio
       - semigroups
-      - safe
   start-iteration:
     main: Main.hs
     source-dirs: start-iteration
@@ -97,4 +96,3 @@ executables:
       - rio
       - text
       - cassava
-      - safe

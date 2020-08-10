@@ -18,12 +18,16 @@ module Asana.App
   , parseBugProjectId
   , parseYear
   , parseImport
+  -- * Prompts
+  , promptWith
+  , readBool
   ) where
 
 import RIO
 
 import Asana.Api.Gid (Gid, textToGid)
 import Control.Monad.IO.Class (liftIO)
+import Data.Char (toLower)
 import Data.Semigroup ((<>))
 import LoadEnv (loadEnvFrom)
 import Options.Applicative
@@ -43,7 +47,7 @@ import Options.Applicative
 import RIO.Text (Text)
 import qualified RIO.Text as T
 import System.Environment (getEnv)
-import System.IO (stderr)
+import System.IO (getLine, putStr, stderr)
 
 data AppWith ext = App
   { appApiAccessKey :: Text
@@ -113,3 +117,14 @@ parseYear = option auto (long "year" <> help "The year to view")
 
 parseImport :: Parser (Maybe FilePath)
 parseImport = optional (strOption (long "import" <> help "CSV File to import"))
+
+promptWith :: MonadIO m => (String -> b) -> String -> m b
+promptWith readVar var = liftIO $ do
+  putStr $ var <> ": "
+  hFlush stdout
+  readVar <$> getLine
+
+readBool :: String -> Bool
+readBool str = case map toLower str of
+  'y' : _ -> True
+  _ -> False
