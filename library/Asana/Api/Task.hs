@@ -4,6 +4,8 @@ module Asana.Api.Task
   , CustomFields(..)
   , EnumOption(..)
   , Membership(..)
+  , TaskSchema (..)
+  , OptField(..)
   , TaskStatusFilter(..)
   , ResourceSubtype(..)
   , getTask
@@ -18,6 +20,7 @@ module Asana.Api.Task
 
 import RIO
 
+import Asana.Api.Generic
 import Asana.Api.Gid (Gid, gidToText)
 import Asana.Api.Named (Named)
 import Asana.Api.Request (getAllParams, getSingle, put)
@@ -150,14 +153,35 @@ instance FromJSON Task where
 getTask :: Gid -> AppM ext Task
 getTask taskId = getSingle $ "/tasks/" <> T.unpack (gidToText taskId)
 
+data TaskStatusFilter = IncompletedTasks | AllTasks
+  deriving (Show, Eq)
+
+data OptField = OptField
+  { optFieldKey :: Text
+  , optFieldValue :: Text
+  }
+  deriving (Show, Eq)
+
+data TaskSchema a = TaskSchema
+  { taskStatusFilter :: TaskStatusFilter
+  , taskOptFields :: [OptField]
+  }
+  deriving (Show, Eq)
+
+instance Semigroup (TaskSchema a) where
+  tsa <> tsb = tsa { taskOptFields = taskOptFields tsa <> taskOptFields tsb }
+
+instance Monoid (TaskSchema a) where
+  mempty = TaskSchema { taskStatusFilter = AllTasks, taskOptFields = [] }
+
 -- | Return compact task details for a project
 --
 -- Iterating ourselves and returning @['Task']@ is a better interface but
 -- precludes us logging things each time we request an element. So we return
 -- @'Named'@ for now and let the caller use @'getTask'@ themselves.
 --
-getProjectTasks :: Gid -> TaskStatusFilter -> AppM ext [Named]
-getProjectTasks projectId taskStatusFilter = do
+getProjectTasks :: GenericAsanaTask a => Gid -> TaskSchema a -> AppM ext [a]
+getProjectTasks projectId TaskSchema {..} = do
   now <- liftIO getCurrentTime
   getAllParams
     (T.unpack $ "/projects/" <> gidToText projectId <> "/tasks")
@@ -169,8 +193,6 @@ getProjectTasks projectId taskStatusFilter = do
 
 formatISO8601 :: FormatTime t => t -> String
 formatISO8601 = formatTime defaultTimeLocale (iso8601DateFormat Nothing)
-
-data TaskStatusFilter = IncompletedTasks | AllTasks
 
 getProjectTasksCompletedSince :: Gid -> UTCTime -> AppM ext [Named]
 getProjectTasksCompletedSince projectId since = getAllParams

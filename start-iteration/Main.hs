@@ -22,7 +22,7 @@ main = do
   app <- loadAppWith $ AppExt <$> parseProjectId <*> parseIgnoreNoCanDo
   runApp app $ do
     projectId <- asks $ appProjectId . appExt
-    projectTasks <- getProjectTasks projectId AllTasks
+    projectTasks <- getProjectTasks projectId mempty
 
     tasks <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
 

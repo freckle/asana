@@ -22,7 +22,7 @@ main = do
   runApp app $ do
     projectId <- asks $ appProjectId . appExt
     perspective <- asks $ appPerspective . appExt
-    projectTasks <- getProjectTasks projectId AllTasks
+    projectTasks <- getProjectTasks projectId mempty
 
     tasks <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
 

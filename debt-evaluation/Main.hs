@@ -70,7 +70,9 @@ main = do
     projectId <- asks $ appProjectId . appExt
 
     logDebug "Fetch stories"
-    tasks <- getProjectTasks projectId IncompletedTasks
+    tasks <- getProjectTasks
+      projectId
+      mempty { taskStatusFilter = IncompletedTasks }
     let
       processStories =
         fmap catMaybes . pooledForConcurrentlyN maxRequests tasks

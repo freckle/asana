@@ -5,6 +5,7 @@ module Asana.Api.Named
 
 import RIO
 
+import Asana.Api.Generic (GenericAsanaTask)
 import Asana.Api.Gid (Gid)
 import Data.Aeson (FromJSON, genericParseJSON, parseJSON)
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
@@ -18,3 +19,5 @@ data Named = Named
 
 instance FromJSON Named where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
+
+instance GenericAsanaTask Named

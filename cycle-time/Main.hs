@@ -136,8 +136,8 @@ fetchRelevantTaskGids projects = do
     $ \project -> do
         logDebug . fromString $ "Project tasks: " <> show
           (gidToText $ pGid project)
-        fmap nGid <$> getProjectTasks (pGid project) AllTasks
+        fmap nGid <$> getProjectTasks (pGid project) mempty
   bugProjectGid <- asks $ appBugProject . appExt
-  bugTaskGids <- fmap nGid <$> getProjectTasks bugProjectGid AllTasks
+  bugTaskGids <- fmap nGid <$> getProjectTasks bugProjectGid mempty
 
   pure $ filter (`notElem` bugTaskGids) taskGids

@@ -28,7 +28,7 @@ main = do
 
 exportProjectTasks :: Gid -> AppM AppExt ()
 exportProjectTasks projectId = do
-  projectTasks <- getProjectTasks projectId AllTasks
+  projectTasks <- getProjectTasks projectId mempty
 
   tasks <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
 
@@ -49,7 +49,7 @@ importProjectTasksFromFile file projectId = do
   case decodeByName contents of
     Left err -> logError $ fromString err
     Right (_, tasks) -> do
-      projectTaskGids <- map nGid <$> getProjectTasks projectId AllTasks
+      projectTaskGids <- map nGid <$> getProjectTasks projectId mempty
       projectTasks <- pooledForConcurrentlyN maxRequests projectTaskGids getTask
       let projectTaskMap = HashMap.fromList $ map (tGid &&& id) projectTasks
 
