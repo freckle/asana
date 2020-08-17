@@ -3,8 +3,11 @@ module Main (main) where
 import RIO
 
 import Asana.Api
+import Asana.Api.Generic
 import Asana.Api.Gid
 import Asana.App
+import Data.Aeson (FromJSON(..), genericParseJSON)
+import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import Data.Csv
 import qualified Data.Text
 import qualified RIO.ByteString.Lazy as RBSL
@@ -13,24 +16,53 @@ import RIO.List (sortOn)
 import qualified RIO.Text as T
 
 data AppExt = AppExt
-  { appProjectId :: Gid
+  { appTopLevelProjectId :: Gid
+  , appTeamProjectId :: Gid
   , appImport :: Maybe FilePath
   }
 
+newtype AsanaReference = AsanaReference { arGid :: Gid }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON AsanaReference where
+  parseJSON = genericParseJSON $ aesonPrefix snakeCase
+
+data TaskWithProjects = TaskWithProjects
+  { twpGid :: Gid
+  , twpProjects :: [AsanaReference]
+  }
+  deriving (Show, Eq, Generic)
+
+instance GenericAsanaTask TaskWithProjects
+
+instance FromJSON TaskWithProjects where
+  parseJSON = genericParseJSON $ aesonPrefix snakeCase
+
 main :: IO ()
 main = do
-  app <- loadAppWith $ AppExt <$> parseProjectId <*> parseImport
+  app <-
+    loadAppWith
+    $ AppExt
+    <$> parseProjectId
+    <*> parseTeamProjectId
+    <*> parseImport
   runApp app $ do
     AppExt {..} <- asks appExt
     case appImport of
-      Nothing -> exportProjectTasks appProjectId
-      Just file -> importProjectTasksFromFile file appProjectId
+      Nothing -> exportProjectTasks appTopLevelProjectId appTeamProjectId
+      Just file -> importProjectTasksFromFile file appTeamProjectId
 
-exportProjectTasks :: Gid -> AppM AppExt ()
-exportProjectTasks projectId = do
-  projectTasks <- getProjectTasks projectId mempty
+exportProjectTasks :: Gid -> Gid -> AppM AppExt ()
+exportProjectTasks topLevelProjectId teamProjectId = do
+  topLevelProjectTasks <- getProjectTasks
+    topLevelProjectId
+    mempty { taskOptFields = [OptField "projects"] }
 
-  tasks <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
+  let
+    teamTasks = flip filter topLevelProjectTasks
+      $ \TaskWithProjects {..} -> any ((== teamProjectId) . arGid) twpProjects
+
+  tasks <- pooledForConcurrentlyN maxRequests teamTasks (getTask . twpGid)
 
   let planningPokerTasks = map toPlanningPokerTask (sortByPriority tasks)
 

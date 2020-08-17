@@ -16,6 +16,7 @@ module Asana.App
   , parsePessimistic
   , parseProjectId
   , parseBugProjectId
+  , parseTeamProjectId
   , parseYear
   , parseImport
   -- * Prompts
@@ -107,6 +108,10 @@ parsePessimistic = flag Optimistic Pessimistic (long "pessimistic")
 parseProjectId :: Parser Gid
 parseProjectId =
   textToGid . T.pack <$> strOption (long "project" <> help "Project Id")
+
+parseTeamProjectId :: Parser Gid
+parseTeamProjectId =
+  textToGid . T.pack <$> strOption (long "team-project" <> help "Team-specific Project Id")
 
 parseBugProjectId :: Parser Gid
 parseBugProjectId =

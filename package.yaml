@@ -92,6 +92,8 @@ executables:
     main: Main.hs
     source-dirs: planning-poker
     dependencies:
+      - aeson
+      - aeson-casing
       - asana
       - rio
       - text

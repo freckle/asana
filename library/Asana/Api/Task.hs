@@ -156,9 +156,8 @@ getTask taskId = getSingle $ "/tasks/" <> T.unpack (gidToText taskId)
 data TaskStatusFilter = IncompletedTasks | AllTasks
   deriving (Show, Eq)
 
-data OptField = OptField
-  { optFieldKey :: Text
-  , optFieldValue :: Text
+newtype OptField = OptField
+  { getOptField :: Text
   }
   deriving (Show, Eq)
 
@@ -185,11 +184,18 @@ getProjectTasks projectId TaskSchema {..} = do
   now <- liftIO getCurrentTime
   getAllParams
     (T.unpack $ "/projects/" <> gidToText projectId <> "/tasks")
-    (completedSince now)
+    (completedSince now <> optFields)
  where
   completedSince now = case taskStatusFilter of
     AllTasks -> []
     IncompletedTasks -> [("completed_since", formatISO8601 now)]
+  optFields = case taskOptFields of
+    [] -> []
+    _ ->
+      [ ( "opt_fields"
+        , T.unpack $ T.intercalate "," (map getOptField taskOptFields)
+        )
+      ]
 
 formatISO8601 :: FormatTime t => t -> String
 formatISO8601 = formatTime defaultTimeLocale (iso8601DateFormat Nothing)
