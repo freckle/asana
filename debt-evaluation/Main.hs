@@ -30,6 +30,7 @@ import Asana.Story
 import Control.Monad (guard, when)
 import Data.Foldable (maximum, minimum)
 import Data.Maybe (mapMaybe)
+import Data.Semigroup (Last(..))
 import RIO.Text (Text)
 import Text.Printf (printf)
 
@@ -72,7 +73,7 @@ main = do
     logDebug "Fetch stories"
     tasks <- getProjectTasks
       projectId
-      mempty { taskStatusFilter = IncompletedTasks }
+      mempty { taskStatusFilter = Last IncompletedTasks }
     let
       processStories =
         fmap catMaybes . pooledForConcurrentlyN maxRequests tasks

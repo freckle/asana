@@ -43,7 +43,7 @@ import Data.Aeson
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import Data.List (find)
 import Data.Scientific (Scientific)
-import Data.Semigroup ((<>))
+import Data.Semigroup (Last(..), (<>))
 import RIO.Text (Text)
 import qualified RIO.Text as T
 import RIO.Time
@@ -162,16 +162,19 @@ newtype OptField = OptField
   deriving (Show, Eq)
 
 data TaskSchema a = TaskSchema
-  { taskStatusFilter :: TaskStatusFilter
+  { taskStatusFilter :: Last TaskStatusFilter
   , taskOptFields :: [OptField]
   }
   deriving (Show, Eq)
 
 instance Semigroup (TaskSchema a) where
-  tsa <> tsb = tsa { taskOptFields = taskOptFields tsa <> taskOptFields tsb }
+  tsa <> tsb = TaskSchema
+    { taskStatusFilter = taskStatusFilter tsa <> taskStatusFilter tsb
+    , taskOptFields = taskOptFields tsa <> taskOptFields tsb
+    }
 
 instance Monoid (TaskSchema a) where
-  mempty = TaskSchema { taskStatusFilter = AllTasks, taskOptFields = [] }
+  mempty = TaskSchema { taskStatusFilter = Last AllTasks, taskOptFields = [] }
 
 -- | Return compact task details for a project
 --
@@ -187,8 +190,8 @@ getProjectTasks projectId TaskSchema {..} = do
     (completedSince now <> optFields)
  where
   completedSince now = case taskStatusFilter of
-    AllTasks -> []
-    IncompletedTasks -> [("completed_since", formatISO8601 now)]
+    Last AllTasks -> []
+    Last IncompletedTasks -> [("completed_since", formatISO8601 now)]
   optFields = case taskOptFields of
     [] -> []
     _ ->
