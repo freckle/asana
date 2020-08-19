@@ -44,7 +44,9 @@ main = do
           <> display url
         pure story
 
-    let capitalizedStats = statStories $ filter sCapitalized stories
+    let
+      capitalizedStats = statStories $ filter sCapitalized stories
+      fullStats = statStories stories
 
     hPutBuilder stdout $ getUtf8Builder $ foldMap
       ("\n" <>)
@@ -52,9 +54,9 @@ main = do
       , "- "
       <> display (getSum $ completed capitalizedStats)
       <> " / "
-      <> display (getSum $ commitment capitalizedStats)
+      <> display (getSum $ completed fullStats)
       ]
-    printStats $ statStories stories
+    printStats fullStats
 
     shouldUpdateCompletedPoints <- promptWith
       readBool
