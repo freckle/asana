@@ -43,9 +43,9 @@ readSet = go . pack
     (k, v) | not (T.null v) -> Right $ Set (Custom k) $ T.drop 1 v
     _ -> Left "Invalid filter, must be <field>:[value]"
 
-override :: [CustomField] -> Set -> Maybe CustomField
+override :: CustomFields -> Set -> Maybe CustomField
 override fields (Set (Custom name) val) = do
-  field <- find (named name) fields
+  field <- find (named name) (getCustomFields fields)
 
   case field of
     CustomNumber gid _ _ -> do

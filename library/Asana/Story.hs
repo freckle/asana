@@ -61,18 +61,18 @@ fromTask Task {..} = case tResourceSubtype of
       Just Named {..} | caseFoldEq nName "Awaiting Deployment" -> True
       _ -> False
 
-findInteger :: Text -> [CustomField] -> Maybe Integer
+findInteger :: Text -> CustomFields -> Maybe Integer
 findInteger field = fmap round . findNumber field
 
-findNumber :: Text -> [CustomField] -> Maybe Scientific
-findNumber field = listToMaybe . mapMaybe cost
+findNumber :: Text -> CustomFields -> Maybe Scientific
+findNumber field = listToMaybe . mapMaybe cost . getCustomFields
  where
   cost = \case
     (CustomNumber _ foundField mn) | caseFoldEq field foundField -> mn
     _ -> Nothing
 
-findYesNo :: Text -> [CustomField] -> Maybe Bool
-findYesNo x = fmap parse . listToMaybe . mapMaybe go
+findYesNo :: Text -> CustomFields -> Maybe Bool
+findYesNo x = fmap parse . listToMaybe . mapMaybe go . getCustomFields
  where
   go (CustomEnum _ name _ mn) | caseFoldEq name x = mn
   go _ = Nothing

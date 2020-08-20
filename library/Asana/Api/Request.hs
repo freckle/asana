@@ -6,6 +6,7 @@ module Asana.Api.Request
   , getAllParams
   , getSingle
   , put
+  , post
   , maxRequests
   ) where
 
@@ -108,22 +109,31 @@ get path params limit mOffset = do
     <> display (getResponseStatusCode response)
   pure $ getResponseBody response
 
-put :: ToJSON a => String -> a -> AppM ext ()
-put path payload = do
+put :: ToJSON a => String -> a -> AppM ext Value
+put = httpAction "PUT"
+
+post :: ToJSON a => String -> a -> AppM ext Value
+post = httpAction "POST"
+
+httpAction :: ToJSON a => ByteString -> String -> a -> AppM ext Value
+httpAction verb path payload = do
   auth <- asks appApiAccessKey
   request <- parseRequest $ "https://app.asana.com/api/1.0" <> path
 
   response <- retry 10 $ httpJSON
-    (setRequestMethod "PUT" . setRequestBodyJSON payload $ addAuthorization
+    (setRequestMethod verb . setRequestBodyJSON payload $ addAuthorization
       auth
       request
     )
   when (300 <= getResponseStatusCode response)
     . logWarn
-    $ "PUT failed "
+    $ displayBytesUtf8 verb
+    <> " failed "
     <> display (getResponseStatusCode response)
     <> " "
     <> displayShow (getResponseBody @Value response)
+
+  pure $ getResponseBody response
 
 addAuthorization :: Text -> Request -> Request
 addAuthorization auth =

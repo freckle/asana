@@ -6,9 +6,12 @@ module Asana.Api.Task
   , Membership(..)
   , TaskStatusFilter(..)
   , ResourceSubtype(..)
+  , ProjectId(..)
+  , PostTaskBody(..)
   , getTask
   , getProjectTasks
   , getProjectTasksCompletedSince
+  , postTask
   , putCustomField
   , putCustomFields
   , taskUrl
@@ -20,23 +23,10 @@ import RIO
 
 import Asana.Api.Gid (Gid, gidToText)
 import Asana.Api.Named (Named)
-import Asana.Api.Request (getAllParams, getSingle, put)
+import Asana.Api.Request (getAllParams, getSingle, post, put)
 import Asana.App (AppM)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
-  ( FromJSON
-  , ToJSON(..)
-  , Value(Object)
-  , constructorTagModifier
-  , defaultOptions
-  , genericParseJSON
-  , object
-  , parseJSON
-  , withObject
-  , (.:)
-  , (.:?)
-  , (.=)
-  )
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import Data.List (find)
 import Data.Scientific (Scientific)
@@ -52,6 +42,18 @@ import RIO.Time
   , iso8601DateFormat
   )
 
+newtype ApiData a = ApiData
+  { adData :: a
+  }
+  deriving stock (Generic, Show, Eq)
+
+instance FromJSON a => FromJSON (ApiData a) where
+  parseJSON = genericParseJSON $ aesonPrefix snakeCase
+
+instance ToJSON a => ToJSON (ApiData a) where
+  toJSON = genericToJSON $ aesonPrefix snakeCase
+  toEncoding = genericToEncoding $ aesonPrefix snakeCase
+
 -- | Just what we need out of our @custom_fields@ for cost and carry-over
 data CustomField
   = CustomNumber Gid Text (Maybe Scientific)
@@ -59,7 +61,9 @@ data CustomField
   | Other -- ^ Unexpected types dumped here
   deriving (Eq, Generic, Show)
 
-newtype CustomFields = CustomFields [CustomField]
+newtype CustomFields = CustomFields { getCustomFields :: [CustomField] }
+  deriving stock (Show, Eq)
+  deriving newtype (FromJSON)
 
 instance ToJSON CustomFields where
   toJSON (CustomFields fields) = object $ concatMap toPair fields
@@ -135,7 +139,7 @@ data Task = Task
   , tCompleted :: Bool
   , tCompletedAt :: Maybe UTCTime
   , tCreatedAt :: UTCTime
-  , tCustomFields :: [CustomField]
+  , tCustomFields :: CustomFields
   , tMemberships :: [Membership]
   , tGid :: Gid
   , tResourceSubtype :: ResourceSubtype
@@ -149,6 +153,29 @@ instance FromJSON Task where
 -- | Return all details for a task by id
 getTask :: Gid -> AppM ext Task
 getTask taskId = getSingle $ "/tasks/" <> T.unpack (gidToText taskId)
+
+newtype ProjectId = ProjectId { getProjectId :: Text }
+  deriving newtype (ToJSON, FromJSON)
+
+data PostTaskBody = PostTaskBody
+  { ptbProjects :: [ProjectId]
+  , ptbCustomFields :: HashMap Gid Text
+  , ptbName :: Text
+  , ptbNotes :: Text
+  , ptbParent :: Maybe Gid
+  }
+  deriving Generic
+
+instance FromJSON PostTaskBody where
+  parseJSON = genericParseJSON $ aesonPrefix snakeCase
+
+instance ToJSON PostTaskBody where
+  toJSON = genericToJSON $ aesonPrefix snakeCase
+  toEncoding = genericToEncoding $ aesonPrefix snakeCase
+
+-- | Create a new 'Task'
+postTask :: PostTaskBody -> AppM ext (Result (ApiData Task))
+postTask body = fromJSON <$> post "/tasks" (ApiData body)
 
 -- | Return compact task details for a project
 --
@@ -181,21 +208,22 @@ putCustomField :: Gid -> CustomField -> AppM ext ()
 putCustomField taskId = putCustomFields taskId . CustomFields . pure
 
 putCustomFields :: Gid -> CustomFields -> AppM ext ()
-putCustomFields taskId fields = put ("/tasks/" <> T.unpack (gidToText taskId))
-  $ object ["data" .= object ["custom_fields" .= fields]]
+putCustomFields taskId fields =
+  void $ put ("/tasks/" <> T.unpack (gidToText taskId)) $ ApiData
+    (object ["custom_fields" .= fields])
 
 taskUrl :: Task -> Text
 taskUrl Task {..} = "https://app.asana.com/0/0/" <> gidToText tGid <> "/f"
 
 extractNumberField :: Text -> Task -> Maybe CustomField
 extractNumberField fieldName Task {..} =
-  listToMaybe $ flip mapMaybe tCustomFields $ \case
+  listToMaybe $ flip mapMaybe (getCustomFields tCustomFields) $ \case
     customField@(CustomNumber _ t _) -> customField <$ guard (t == fieldName)
     _ -> Nothing
 
 extractEnumField :: Text -> Task -> Maybe CustomField
 extractEnumField fieldName Task {..} =
-  listToMaybe $ flip mapMaybe tCustomFields $ \case
+  listToMaybe $ flip mapMaybe (getCustomFields tCustomFields) $ \case
     customField@(CustomEnum _ t _ _) ->
       if t == fieldName then Just customField else Nothing
     _ -> Nothing
