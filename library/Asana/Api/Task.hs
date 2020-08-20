@@ -14,6 +14,7 @@ module Asana.Api.Task
   , postTask
   , putCustomField
   , putCustomFields
+  , searchProjectByCustomFields
   , taskUrl
   , extractNumberField
   , extractEnumField
@@ -31,6 +32,7 @@ import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import Data.List (find)
 import Data.Scientific (Scientific)
 import Data.Semigroup ((<>))
+import qualified RIO.HashMap as HashMap
 import RIO.Text (Text)
 import qualified RIO.Text as T
 import RIO.Time
@@ -58,6 +60,7 @@ instance ToJSON a => ToJSON (ApiData a) where
 data CustomField
   = CustomNumber Gid Text (Maybe Scientific)
   | CustomEnum Gid Text [EnumOption] (Maybe Text)
+  | CustomText Gid (Maybe Text)
   | Other -- ^ Unexpected types dumped here
   deriving (Eq, Generic, Show)
 
@@ -100,6 +103,7 @@ instance FromJSON CustomField where
     oType <- o .: "type"
 
     case (oType :: Text) of
+      "text" -> CustomText <$> o .: "gid" <*> o .: "text_value"
       "number" ->
         CustomNumber <$> o .: "gid" <*> o .: "name" <*> o .: "number_value"
       "enum" -> do
@@ -176,6 +180,22 @@ instance ToJSON PostTaskBody where
 -- | Create a new 'Task'
 postTask :: PostTaskBody -> AppM ext (Result (ApiData Task))
 postTask body = fromJSON <$> post "/tasks" (ApiData body)
+
+-- | Search for tasks within a workspace & project matching 'CustomField's
+searchProjectByCustomFields
+  :: Gid -> Gid -> HashMap Gid Text -> AppM ext [Named]
+searchProjectByCustomFields workspaceId projectId customFields =
+  getAllParams
+      (T.unpack $ "/workspaces/" <> gidToText workspaceId <> "/tasks/search")
+    $ ("projects.all", T.unpack $ gidToText projectId)
+    : customFieldParams
+ where
+  customFieldParams =
+    map
+        (\(a, b) ->
+          ("custom_fields." <> T.unpack (gidToText a) <> ".value", T.unpack b)
+        )
+      $ HashMap.toList customFields
 
 -- | Return compact task details for a project
 --
