@@ -62,7 +62,7 @@ instance ToJSON a => ToJSON (ApiData a) where
 data CustomField
   = CustomNumber Gid Text (Maybe Scientific)
   | CustomEnum Gid Text [EnumOption] (Maybe Text)
-  | CustomText Gid (Maybe Text)
+  | CustomText Gid Text (Maybe Text)
   | Other -- ^ Unexpected types dumped here
   deriving (Eq, Generic, Show)
 
@@ -105,7 +105,7 @@ instance FromJSON CustomField where
     oType <- o .: "type"
 
     case (oType :: Text) of
-      "text" -> CustomText <$> o .: "gid" <*> o .: "text_value"
+      "text" -> CustomText <$> o .: "gid" <*> o .: "name" <*> o .: "text_value"
       "number" ->
         CustomNumber <$> o .: "gid" <*> o .: "name" <*> o .: "number_value"
       "enum" -> do

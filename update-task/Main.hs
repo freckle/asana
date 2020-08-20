@@ -52,12 +52,12 @@ override fields (Set (Custom name) val) = do
       n <- readMaybe $ unpack val
       Just $ CustomNumber gid name $ Just n
     CustomEnum gid _ opts _ -> Just $ CustomEnum gid name opts $ Just val
-    CustomText gid _ -> Just $ CustomText gid (Just val)
+    CustomText gid _ _ -> Just $ CustomText gid name $ Just val
     Other -> Nothing
 
 named :: Text -> CustomField -> Bool
 named name = \case
   CustomNumber _ n _ -> name == n
   CustomEnum _ n _ _ -> name == n
-  CustomText _ n -> name == n
+  CustomText _ n _ -> name == n
   Other -> False
