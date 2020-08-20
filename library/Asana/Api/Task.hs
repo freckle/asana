@@ -5,16 +5,18 @@ module Asana.Api.Task
   , EnumOption(..)
   , Membership(..)
   , TaskStatusFilter(..)
+  , TaskTypeFilter(..)
   , ResourceSubtype(..)
   , ProjectId(..)
-  , PostTaskBody(..)
+  , PostTask(..)
+  , SearchWorkspace(..)
   , getTask
   , getProjectTasks
   , getProjectTasksCompletedSince
   , postTask
   , putCustomField
   , putCustomFields
-  , searchProjectByCustomFields
+  , searchWorkspace
   , taskUrl
   , extractNumberField
   , extractEnumField
@@ -29,7 +31,7 @@ import Asana.App (AppM)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
-import Data.List (find)
+import Data.List (find, intercalate)
 import Data.Scientific (Scientific)
 import Data.Semigroup ((<>))
 import qualified RIO.HashMap as HashMap
@@ -161,41 +163,63 @@ getTask taskId = getSingle $ "/tasks/" <> T.unpack (gidToText taskId)
 newtype ProjectId = ProjectId { getProjectId :: Text }
   deriving newtype (ToJSON, FromJSON)
 
-data PostTaskBody = PostTaskBody
-  { ptbProjects :: [ProjectId]
-  , ptbCustomFields :: HashMap Gid Text
-  , ptbName :: Text
-  , ptbNotes :: Text
-  , ptbParent :: Maybe Gid
+data PostTask= PostTask
+  { ptProjects :: [ProjectId]
+  , ptCustomFields :: HashMap Gid Text
+  , ptName :: Text
+  , ptNotes :: Text
+  , ptParent :: Maybe Gid
   }
   deriving Generic
 
-instance FromJSON PostTaskBody where
+instance FromJSON PostTask where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
 
-instance ToJSON PostTaskBody where
+instance ToJSON PostTask where
   toJSON = genericToJSON $ aesonPrefix snakeCase
   toEncoding = genericToEncoding $ aesonPrefix snakeCase
 
 -- | Create a new 'Task'
-postTask :: PostTaskBody -> AppM ext (Result (ApiData Task))
+postTask :: PostTask -> AppM ext (Result (ApiData Task))
 postTask body = fromJSON <$> post "/tasks" (ApiData body)
 
--- | Search for tasks within a workspace & project matching 'CustomField's
-searchProjectByCustomFields
-  :: Gid -> Gid -> HashMap Gid Text -> AppM ext [Named]
-searchProjectByCustomFields workspaceId projectId customFields =
+data TaskTypeFilter = TasksOnly | SubtasksOnly | AllTaskTypes
+
+data SearchWorkspace = SearchWorkspace
+  { swWorkspaceId :: Gid
+  , swProjectIds :: [Gid]
+  , swTaskStatusFilter :: TaskStatusFilter
+  , swCustomFields :: HashMap Gid Text
+  , swTaskTypeFilter :: TaskTypeFilter
+  }
+
+-- | Search for tasks within a workspace
+searchWorkspace :: SearchWorkspace -> AppM ext [Named]
+searchWorkspace SearchWorkspace {..} =
   getAllParams
-      (T.unpack $ "/workspaces/" <> gidToText workspaceId <> "/tasks/search")
-    $ ("projects.all", T.unpack $ gidToText projectId)
+      (T.unpack $ "/workspaces/" <> gidToText swWorkspaceId <> "/tasks/search")
+    $ ( "projects.all"
+      , intercalate "," $ map (T.unpack . gidToText) swProjectIds
+      )
     : customFieldParams
+    <> completed
+    <> isSubtask
  where
   customFieldParams =
     map
         (\(a, b) ->
           ("custom_fields." <> T.unpack (gidToText a) <> ".value", T.unpack b)
         )
-      $ HashMap.toList customFields
+      $ HashMap.toList swCustomFields
+
+  completed = case swTaskStatusFilter of
+    AllTasks -> []
+    IncompletedTasks -> [("completed", "false")]
+
+  isSubtask = case swTaskTypeFilter of
+    AllTaskTypes -> []
+    TasksOnly -> [("is_subtask", "false")]
+    SubtasksOnly -> [("is_subtask", "true")]
 
 -- | Return compact task details for a project
 --
@@ -209,6 +233,7 @@ getProjectTasks projectId taskStatusFilter = do
   getAllParams
     (T.unpack $ "/projects/" <> gidToText projectId <> "/tasks")
     (completedSince now)
+
  where
   completedSince now = case taskStatusFilter of
     AllTasks -> []
