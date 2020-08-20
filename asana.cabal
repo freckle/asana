@@ -1,0 +1,140 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 9bce87dc1d3abe7323f340eb95ba2782b564f6a4dcbac42d49ca2a47e1f257be
+
+name:           asana
+version:        0.0.0
+build-type:     Simple
+
+library
+  exposed-modules:
+      Asana.Api
+      Asana.Api.Gid
+      Asana.Api.Named
+      Asana.Api.Project
+      Asana.Api.Request
+      Asana.Api.Task
+      Asana.App
+      Asana.Story
+  other-modules:
+      Paths_asana
+  hs-source-dirs:
+      library
+  default-extensions: BangPatterns DataKinds DeriveAnyClass DeriveFoldable DeriveFunctor DeriveGeneric DeriveLift DeriveTraversable DerivingStrategies FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses NoImplicitPrelude NoMonomorphismRestriction OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies
+  build-depends:
+      aeson
+    , aeson-casing
+    , base
+    , http-conduit
+    , load-env
+    , optparse-applicative
+    , rio
+    , scientific
+  default-language: Haskell2010
+
+executable bug-reproduction
+  main-is: Main.hs
+  other-modules:
+      Paths_asana
+  hs-source-dirs:
+      bug-reproduction
+  default-extensions: BangPatterns DataKinds DeriveAnyClass DeriveFoldable DeriveFunctor DeriveGeneric DeriveLift DeriveTraversable DerivingStrategies FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses NoImplicitPrelude NoMonomorphismRestriction OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies
+  build-depends:
+      asana
+    , base
+    , rio
+    , semigroups
+  default-language: Haskell2010
+
+executable close-iteration
+  main-is: Main.hs
+  other-modules:
+      Paths_asana
+  hs-source-dirs:
+      close-iteration
+  default-extensions: BangPatterns DataKinds DeriveAnyClass DeriveFoldable DeriveFunctor DeriveGeneric DeriveLift DeriveTraversable DerivingStrategies FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses NoImplicitPrelude NoMonomorphismRestriction OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies
+  build-depends:
+      asana
+    , base
+    , rio
+    , semigroups
+  default-language: Haskell2010
+
+executable cycle-time
+  main-is: Main.hs
+  other-modules:
+      Paths_asana
+  hs-source-dirs:
+      cycle-time
+  default-extensions: BangPatterns DataKinds DeriveAnyClass DeriveFoldable DeriveFunctor DeriveGeneric DeriveLift DeriveTraversable DerivingStrategies FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses NoImplicitPrelude NoMonomorphismRestriction OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies
+  build-depends:
+      asana
+    , base
+    , cassava
+    , containers
+    , rio
+    , statistics
+    , temporary
+    , vector
+  default-language: Haskell2010
+
+executable debt-evaluation
+  main-is: Main.hs
+  other-modules:
+      Paths_asana
+  hs-source-dirs:
+      debt-evaluation
+  default-extensions: BangPatterns DataKinds DeriveAnyClass DeriveFoldable DeriveFunctor DeriveGeneric DeriveLift DeriveTraversable DerivingStrategies FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses NoImplicitPrelude NoMonomorphismRestriction OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies
+  build-depends:
+      asana
+    , base
+    , rio
+  default-language: Haskell2010
+
+executable planning-poker
+  main-is: Main.hs
+  other-modules:
+      Paths_asana
+  hs-source-dirs:
+      planning-poker
+  default-extensions: BangPatterns DataKinds DeriveAnyClass DeriveFoldable DeriveFunctor DeriveGeneric DeriveLift DeriveTraversable DerivingStrategies FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses NoImplicitPrelude NoMonomorphismRestriction OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies
+  build-depends:
+      asana
+    , base
+    , cassava
+    , rio
+    , text
+  default-language: Haskell2010
+
+executable start-iteration
+  main-is: Main.hs
+  other-modules:
+      Paths_asana
+  hs-source-dirs:
+      start-iteration
+  default-extensions: BangPatterns DataKinds DeriveAnyClass DeriveFoldable DeriveFunctor DeriveGeneric DeriveLift DeriveTraversable DerivingStrategies FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses NoImplicitPrelude NoMonomorphismRestriction OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies
+  build-depends:
+      asana
+    , base
+    , rio
+    , transformers
+  default-language: Haskell2010
+
+executable update-task
+  main-is: Main.hs
+  other-modules:
+      Paths_asana
+  hs-source-dirs:
+      update-task
+  default-extensions: BangPatterns DataKinds DeriveAnyClass DeriveFoldable DeriveFunctor DeriveGeneric DeriveLift DeriveTraversable DerivingStrategies FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses NoImplicitPrelude NoMonomorphismRestriction OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies
+  build-depends:
+      asana
+    , base
+    , optparse-applicative
+    , rio
+    , text
+  default-language: Haskell2010
