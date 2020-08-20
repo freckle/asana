@@ -7,12 +7,12 @@ module Asana.Api.Gid
 
 import RIO
 
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import RIO.Text (Text)
 
 newtype Gid = Gid { gidToText :: Text }
   deriving (Eq, Generic, Show)
-  deriving newtype (FromJSON, ToJSON, Hashable)
+  deriving newtype (FromJSON, ToJSON, ToJSONKey, FromJSONKey, Hashable)
 
 textToGid :: Text -> Gid
 textToGid = Gid
