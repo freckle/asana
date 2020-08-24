@@ -176,8 +176,8 @@ instance ToJSON PostTask where
   toEncoding = genericToEncoding $ aesonPrefix snakeCase
 
 -- | Create a new 'Task'
-postTask :: PostTask -> AppM ext (Result (ApiData Task))
-postTask body = fromJSON <$> post "/tasks" (ApiData body)
+postTask :: PostTask -> AppM ext (Result Task)
+postTask body = fmap adData . fromJSON <$> post "/tasks" (ApiData body)
 
 data TaskTypeFilter = TasksOnly | SubtasksOnly | AllTaskTypes
 
