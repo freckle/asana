@@ -7,7 +7,6 @@ module Asana.Api.Task
   , TaskStatusFilter(..)
   , TaskTypeFilter(..)
   , ResourceSubtype(..)
-  , ProjectId(..)
   , PostTask(..)
   , SearchWorkspace(..)
   , getTask
@@ -160,11 +159,8 @@ instance FromJSON Task where
 getTask :: Gid -> AppM ext Task
 getTask taskId = getSingle $ "/tasks/" <> T.unpack (gidToText taskId)
 
-newtype ProjectId = ProjectId { getProjectId :: Text }
-  deriving newtype (ToJSON, FromJSON)
-
-data PostTask= PostTask
-  { ptProjects :: [ProjectId]
+data PostTask = PostTask
+  { ptProjects :: [Gid]
   , ptCustomFields :: HashMap Gid Text
   , ptName :: Text
   , ptNotes :: Text
