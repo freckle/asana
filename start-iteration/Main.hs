@@ -45,19 +45,7 @@ main = do
             flip any tMemberships $ \Membership { mProject } ->
               T.toLower (nName mProject) == T.toLower (T.pack subprojectName)
 
-    shouldUpdateCommitment <- promptWith readBool "Update commitment? (y/N)"
-
-    if shouldUpdateCommitment
-      then pooledForConcurrentlyN_
-        maxRequests
-        tasks
-        (updateCommitment projectId)
-      else logInfo "Skipping commitment update"
-
-    -- Re-fetch tasks after making changes to commitment
-    tasks1 <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
-
-    stories <- fmap catMaybes . for tasks1 $ \task -> runMaybeT $ do
+    stories <- fmap catMaybes . for tasks $ \task -> runMaybeT $ do
       story@Story {..} <- MaybeT $ pure $ fromTask task
       let url = "<" <> storyUrl projectId story <> ">"
       MaybeT $ do
@@ -73,10 +61,6 @@ main = do
         when (isNothing sCost)
           . logWarn
           $ "Story is not costed: "
-          <> display url
-        when (isNothing sCommitment)
-          . logWarn
-          $ "Story has no 'commitment' (did you mean to update it?): "
           <> display url
         case sAssignee of
           Nothing -> do
@@ -109,35 +93,6 @@ main = do
       <> display (iterationNum + carriedNum)
       <> " stories)"
       ]
-
--- | Calculate commitment for this iteration and update the @commitment@ field
-updateCommitment :: Gid -> Task -> AppM AppExt ()
-updateCommitment projectId task = do
-  let mStory = fromTask task
-  for_ mStory $ \story@Story {..} -> do
-    let
-      mCommitment = sCarryIn <|> sCost
-      mCommitmentField = extractNumberField "commitment" task
-
-    case mCommitmentField of
-      Nothing ->
-        logWarn
-          . display
-          $ "No 'commitment' field for story "
-          <> storyUrl projectId story
-          <> ">. Skipping."
-      Just commitmentField -> case commitmentField of
-        CustomNumber gid t _ -> do
-          putCustomField
-            (tGid task)
-            (CustomNumber gid t (fromInteger <$> mCommitment))
-          logInfo
-            . display
-            $ "Updated 'commitment' for story "
-            <> display (storyUrl projectId story)
-            <> " to "
-            <> displayShow mCommitment
-        _ -> error "impossible"
 
 makeUrl :: Gid -> Story -> Text
 makeUrl projectId story = "<" <> storyUrl projectId story <> ">"

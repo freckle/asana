@@ -42,17 +42,27 @@ main = do
     stories <- fmap catMaybes . for tasks $ \task -> do
       let mStory = fromTask task
       for mStory $ \story@Story {..} -> do
-        let url = "<" <> storyUrl projectId story <> ">"
-        logInfo . display $ sName <> " " <> url
+        let
+          url = "<" <> storyUrl projectId story <> ">"
+          status = "(" <> getStoryStatus story <> ")"
+        logInfo . display $ sName <> " " <> url <> " " <> status
 
         let
           incompleteNoCarry =
             not sCompleted && isNothing sCarryOut && maybe True (> 0) sCost
+          doubleCarry = not sCompleted && isJust sCarryIn
+
 
         when incompleteNoCarry
           $ logWarn
           $ "No carry over on incomplete story: "
           <> display url
+
+        when doubleCarry
+          $ logError
+          $ "Story is going to carry twice: "
+          <> display url
+
         pure story
 
     let
@@ -181,3 +191,10 @@ instance Monoid CompletionStats where
 infixl 1 `implies`
 implies :: Monoid m => Bool -> m -> m
 implies predicate a = if predicate then a else mempty
+
+getStoryStatus :: Story -> Text
+getStoryStatus Story {..}
+  | sCompleted && isJust sCarryIn = "Completed carry"
+  | sCompleted && isNothing sCarryIn = "Completed new"
+  | not sCompleted && isJust sCarryOut = "Incomplete"
+  | otherwise = "Unknown"
