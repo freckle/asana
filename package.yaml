@@ -56,7 +56,6 @@ executables:
       - asana
       - rio
       - semigroups
-      - optparse-applicative
   start-iteration:
     main: Main.hs
     source-dirs: start-iteration
