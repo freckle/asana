@@ -11,7 +11,6 @@ import Control.Monad (when)
 import Data.Maybe (isJust, isNothing)
 import Data.Semigroup (Sum(..), (<>))
 import Data.Semigroup.Generic (gmappend, gmempty)
-import Options.Applicative
 import qualified RIO.Text as T
 
 data AppExt = AppExt
@@ -21,8 +20,7 @@ data AppExt = AppExt
 
 main :: IO ()
 main = do
-  app <- loadAppWith $ AppExt <$> parseProjectId <*> optional
-    (strOption (long "subproject" <> help "Optional subproject name"))
+  app <- loadAppWith $ AppExt <$> parseProjectId <*> parseSubprojectName
 
   runApp app $ do
     projectId <- asks $ appProjectId . appExt

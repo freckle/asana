@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module Main (main) where
 
 import RIO
@@ -11,20 +12,38 @@ import Control.Monad.Trans.Maybe (MaybeT(MaybeT), runMaybeT)
 import Data.List (partition, tail, zipWith)
 import Data.Maybe (isJust, isNothing, mapMaybe)
 import Data.Semigroup ((<>))
+import qualified RIO.Text as T
 
 data AppExt = AppExt
   { appProjectId :: Gid
   , appIgnoreNoCanDo :: Bool
+  , appSubprojectName :: Maybe String
   }
 
 main :: IO ()
 main = do
-  app <- loadAppWith $ AppExt <$> parseProjectId <*> parseIgnoreNoCanDo
+  app <-
+    loadAppWith
+    $ AppExt
+    <$> parseProjectId
+    <*> parseIgnoreNoCanDo
+    <*> parseSubprojectName
   runApp app $ do
     projectId <- asks $ appProjectId . appExt
     projectTasks <- getProjectTasks projectId AllTasks
 
-    tasks <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
+    tasks <- do
+      allTasks <- pooledForConcurrentlyN
+        maxRequests
+        projectTasks
+        (getTask . nGid)
+
+      case appSubprojectName (appExt app) of
+        Nothing -> pure allTasks
+        Just subprojectName ->
+          pure $ flip filter allTasks $ \Task { tMemberships } ->
+            flip any tMemberships $ \Membership { mProject } ->
+              T.toLower (nName mProject) == T.toLower (T.pack subprojectName)
 
     shouldUpdateCommitment <- promptWith readBool "Update commitment? (y/N)"
 
@@ -35,8 +54,9 @@ main = do
         (updateCommitment projectId)
       else logInfo "Skipping commitment update"
 
-    -- Re-fetch tasks after making changes to commitment/carry in
+    -- Re-fetch tasks after making changes to commitment
     tasks1 <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
+
     stories <- fmap catMaybes . for tasks1 $ \task -> runMaybeT $ do
       story@Story {..} <- MaybeT $ pure $ fromTask task
       let url = "<" <> storyUrl projectId story <> ">"

@@ -18,6 +18,7 @@ module Asana.App
   , parseBugProjectId
   , parseYear
   , parseImport
+  , parseSubprojectName
   -- * Prompts
   , promptWith
   , readBool
@@ -117,6 +118,10 @@ parseYear = option auto (long "year" <> help "The year to view")
 
 parseImport :: Parser (Maybe FilePath)
 parseImport = optional (strOption (long "import" <> help "CSV File to import"))
+
+parseSubprojectName :: Parser (Maybe String)
+parseSubprojectName =
+  optional (strOption (long "subproject" <> help "Optional subproject name"))
 
 promptWith :: MonadIO m => (String -> b) -> String -> m b
 promptWith readVar var = liftIO $ do
