@@ -61,7 +61,7 @@ fromTask Task {..} = case tResourceSubtype of
       _ -> False
 
   isCarryIn = flip any tMemberships $ \Membership {..} -> case mSection of
-    Just Named {..} | caseFoldEq nName "(101) Carryover" -> True
+    Just Named {..} | "carryover" `T.isInfixOf` T.toLower nName -> True
     _ -> False
 
   sCarryIn = do
