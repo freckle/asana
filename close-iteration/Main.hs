@@ -11,19 +11,35 @@ import Control.Monad (when)
 import Data.Maybe (isJust, isNothing)
 import Data.Semigroup (Sum(..), (<>))
 import Data.Semigroup.Generic (gmappend, gmempty)
+import Options.Applicative
+import qualified RIO.Text as T
 
-newtype AppExt = AppExt
+data AppExt = AppExt
   { appProjectId :: Gid
+  , appSubprojectName :: Maybe String
   }
 
 main :: IO ()
 main = do
-  app <- loadAppWith $ AppExt <$> parseProjectId
+  app <- loadAppWith $ AppExt <$> parseProjectId <*> optional
+    (strOption (long "subproject" <> help "Optional subproject name"))
+
   runApp app $ do
     projectId <- asks $ appProjectId . appExt
     projectTasks <- getProjectTasks projectId AllTasks
 
-    tasks <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
+    tasks <- do
+      allTasks <- pooledForConcurrentlyN
+        maxRequests
+        projectTasks
+        (getTask . nGid)
+
+      case appSubprojectName (appExt app) of
+        Nothing -> pure allTasks
+        Just subprojectName ->
+          pure $ flip filter allTasks $ \Task { tMemberships } ->
+            flip any tMemberships $ \Membership { mProject } ->
+              T.toLower (nName mProject) == T.toLower (T.pack subprojectName)
 
     stories <- fmap catMaybes . for tasks $ \task -> do
       let mStory = fromTask task
@@ -33,10 +49,7 @@ main = do
 
         let
           incompleteNoCarry =
-            not sCompleted
-              && isNothing sCarryOver
-              && isNothing sCarryOut
-              && maybe True (> 0) sCost
+            not sCompleted && isNothing sCarryOut && maybe True (> 0) sCost
 
         when incompleteNoCarry
           $ logWarn

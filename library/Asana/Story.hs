@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module Asana.Story
   ( Story(..)
   , fromTask
@@ -24,7 +25,6 @@ data Story = Story
   , sCommitment :: Maybe Integer
   , sVirality :: Maybe Integer
   , sImpact :: Maybe Integer
-  , sCarryOver :: Maybe Integer
   , sCarryIn :: Maybe Integer
   , sCarryOut :: Maybe Integer
   , sCanDo :: Maybe Bool
@@ -47,19 +47,30 @@ fromTask Task {..} = case tResourceSubtype of
     , sCommitment = findInteger "commitment" tCustomFields
     , sImpact = findInteger "impact" tCustomFields
     , sVirality = findInteger "virality" tCustomFields
-    , sCarryOver = findInteger "carryover" tCustomFields
-    , sCarryIn = findInteger "carry in" tCustomFields
-    , sCarryOut = findInteger "carry out" tCustomFields
     , sCanDo = findYesNo "can do?" tCustomFields
     , sReproduced = findYesNo "Reproduces on seed data?" tCustomFields
     , sCapitalized = fromMaybe False $ findYesNo "cap?" tCustomFields
     , sGid = tGid
+    , sCarryIn
+    , sCarryOut
     }
  where
   awaitingDeployment = flip any tMemberships $ \Membership {..} ->
     case mSection of
       Just Named {..} | caseFoldEq nName "Awaiting Deployment" -> True
       _ -> False
+
+  isCarryIn = flip any tMemberships $ \Membership {..} -> case mSection of
+    Just Named {..} | caseFoldEq nName "(101) Carryover" -> True
+    _ -> False
+
+  sCarryIn = do
+    carry <- findInteger "carryover" tCustomFields
+    carry <$ guard isCarryIn
+
+  sCarryOut = do
+    carry <- findInteger "carryover" tCustomFields
+    carry <$ guard (not isCarryIn)
 
 findInteger :: Text -> CustomFields -> Maybe Integer
 findInteger field = fmap round . findNumber field

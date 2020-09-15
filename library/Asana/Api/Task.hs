@@ -121,7 +121,6 @@ instance FromJSON CustomField where
                 _ -> pure Nothing
       _ -> pure Other
 
--- | We need to know Section to find "Awaiting Deployment"
 data Membership = Membership
   { mProject :: Named
   , mSection :: Maybe Named
