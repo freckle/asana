@@ -43,8 +43,8 @@ fromTask Task {..} = case tResourceSubtype of
     , sName = tName
     , sCompleted = tCompleted || awaitingDeployment
     , sCompletedAt = tCompletedAt
-    , sCost = findInteger "cost" tCustomFields
-    , sCommitment = findInteger "commitment" tCustomFields
+    , sCost
+    , sCommitment = sCarryIn <|> sCost
     , sImpact = findInteger "impact" tCustomFields
     , sVirality = findInteger "virality" tCustomFields
     , sCanDo = findYesNo "can do?" tCustomFields
@@ -59,7 +59,7 @@ fromTask Task {..} = case tResourceSubtype of
     case mSection of
       Just Named {..} | caseFoldEq nName "Awaiting Deployment" -> True
       _ -> False
-
+  sCost = findInteger "cost" tCustomFields
   isCarryIn = flip any tMemberships $ \Membership {..} -> case mSection of
     Just Named {..} | "carryover" `T.isInfixOf` T.toLower nName -> True
     _ -> False
