@@ -27,9 +27,6 @@ main = do
     tasks <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
 
     shouldUpdateCommitment <- promptWith readBool "Update commitment? (y/N)"
-    shouldMoveCarryOut <- promptWith
-      readBool
-      "Move carry out to carry in? (y/N)"
 
     if shouldUpdateCommitment
       then pooledForConcurrentlyN_
@@ -37,10 +34,6 @@ main = do
         tasks
         (updateCommitment projectId)
       else logInfo "Skipping commitment update"
-
-    if shouldMoveCarryOut
-      then pooledForConcurrentlyN_ maxRequests tasks (moveCarryOutIn projectId)
-      else logInfo "Skipping carry out -> carry in move"
 
     -- Re-fetch tasks after making changes to commitment/carry in
     tasks1 <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
@@ -60,10 +53,6 @@ main = do
         when (isNothing sCost)
           . logWarn
           $ "Story is not costed: "
-          <> display url
-        when (isJust sCarryOut)
-          . logWarn
-          $ "Story still has 'carry out' (did you mean to move to 'carry in'?): "
           <> display url
         when (isNothing sCommitment)
           . logWarn
@@ -129,47 +118,6 @@ updateCommitment projectId task = do
             <> " to "
             <> displayShow mCommitment
         _ -> error "impossible"
-
--- | Move @carry out@ to @carry in@ if it is set.
-moveCarryOutIn :: Gid -> Task -> AppM AppExt ()
-moveCarryOutIn projectId task = do
-  let mStory = fromTask task
-  for_ mStory $ \story@Story {..} -> case sCarryOut of
-    Nothing ->
-      logInfo
-        . display
-        $ "No 'carry out' for story "
-        <> makeUrl projectId story
-        <> ". Skipping copy."
-    Just carryOut -> do
-      let mCarryInField = extractNumberField "carry in" task
-      let mCarryOutField = extractNumberField "carry in" task
-
-      case mCarryInField of
-        Nothing ->
-          logWarn
-            . display
-            $ "No 'carry in' field for story "
-            <> makeUrl projectId story
-            <> ". Skipping copy."
-        Just (CustomNumber gid t _) -> do
-          putCustomField
-            (tGid task)
-            (CustomNumber gid t (Just $ fromInteger carryOut))
-
-          -- Wipe @carry out@
-          case mCarryOutField of
-            Just (CustomNumber outGid outT _) ->
-              putCustomField (tGid task) (CustomNumber outGid outT Nothing)
-            _ -> error "impossible"
-
-          logInfo
-            . display
-            $ "Updated 'carry in' for story "
-            <> makeUrl projectId story
-            <> " to "
-            <> tshow carryOut
-        Just _ -> error "impossible"
 
 makeUrl :: Gid -> Story -> Text
 makeUrl projectId story = "<" <> storyUrl projectId story <> ">"

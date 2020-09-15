@@ -5,3 +5,6 @@
 *.hoo
 **/client_session_key.aes
 *.prof
+**/*.dump-hi
+**/*.hie
+*.csv

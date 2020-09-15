@@ -4,10 +4,12 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9bce87dc1d3abe7323f340eb95ba2782b564f6a4dcbac42d49ca2a47e1f257be
+-- hash: 65b9f3ae2739b428e42a39a65acbd1c848d028eb46731b3eec5d82c590605318
 
 name:           asana
 version:        0.0.0
+license:        MIT
+license-file:   LICENSE
 build-type:     Simple
 
 library
@@ -60,6 +62,7 @@ executable close-iteration
   build-depends:
       asana
     , base
+    , optparse-applicative
     , rio
     , semigroups
   default-language: Haskell2010
