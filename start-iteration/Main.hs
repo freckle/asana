@@ -46,7 +46,7 @@ main = do
               T.toLower (nName mProject) == T.toLower (T.pack subprojectName)
 
     stories <- fmap catMaybes . for tasks $ \task -> runMaybeT $ do
-      story@Story {..} <- MaybeT $ pure $ fromTask task
+      story@Story {..} <- MaybeT $ pure $ fromTask (Just projectId) task
       let url = "<" <> storyUrl projectId story <> ">"
       MaybeT $ do
         logInfo . display $ url <> " " <> sName

@@ -40,7 +40,7 @@ main = do
               T.toLower (nName mProject) == T.toLower (T.pack subprojectName)
 
     stories <- fmap catMaybes . for tasks $ \task -> do
-      let mStory = fromTask task
+      let mStory = fromTask (Just projectId) task
       for mStory $ \story@Story {..} -> do
         let
           url = "<" <> storyUrl projectId story <> ">"
@@ -97,7 +97,7 @@ getCompletedPoints Story {..} = case (sCompleted, sCarryIn, sCarryOut) of
 updateCompletedPoints :: Gid -> [Task] -> AppM AppExt ()
 updateCompletedPoints projectId tasks =
   pooledForConcurrentlyN_ maxRequests tasks $ \task -> do
-    let mStory = fromTask task
+    let mStory = fromTask (Just projectId) task
     for_ mStory $ \story@Story {..} -> case getCompletedPoints story of
       Nothing ->
         logWarn
