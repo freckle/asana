@@ -46,7 +46,7 @@ main = do
     let
       accumulateStory :: Totals -> Named -> AppM ext Totals
       accumulateStory totals named = do
-        mStory <- fromTask <$> getTask (nGid named)
+        mStory <- fromTask Nothing <$> getTask (nGid named)
         case mStory of
           Nothing -> pure mempty
           Just story@Story {..} -> do

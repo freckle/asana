@@ -34,8 +34,13 @@ data Story = Story
   }
   deriving Show
 
-fromTask :: Task -> Maybe Story
-fromTask Task {..} = case tResourceSubtype of
+fromTask
+  :: Maybe Gid
+  -- ^ Optional projectId to search for Carryover section within to determine
+  -- carry-in vs carry-out. Unnecessary for non-iteration-tracking purposes.
+  -> Task
+  -> Maybe Story
+fromTask mProjectId Task {..} = case tResourceSubtype of
   Milestone -> Nothing
   Section -> Nothing
   DefaultTask -> Just $ Story
@@ -61,7 +66,10 @@ fromTask Task {..} = case tResourceSubtype of
       _ -> False
   sCost = findInteger "cost" tCustomFields
   isCarryIn = flip any tMemberships $ \Membership {..} -> case mSection of
-    Just Named {..} | "carryover" `T.isInfixOf` T.toLower nName -> True
+    Just Named { nName } -> fromMaybe False $ do
+      guard $ "carryover" `T.isInfixOf` T.toLower nName
+      for_ mProjectId $ \projectId -> guard $ nGid mProject == projectId
+      pure True
     _ -> False
 
   sCarryIn = do
