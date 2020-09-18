@@ -27,6 +27,7 @@ module Asana.App
 import RIO
 
 import Asana.Api.Gid (Gid, textToGid)
+import Asana.Api.Request (HasAsana(..))
 import Control.Monad.IO.Class (liftIO)
 import Data.Char (toLower)
 import Data.Semigroup ((<>))
@@ -61,6 +62,10 @@ type App = AppWith ()
 
 instance HasLogFunc (AppWith ext) where
   logFuncL = lens logFunc (\app logFunc -> app { logFunc })
+
+instance HasAsana (AppWith ext) where
+  asanaApiAccessKeyL =
+    lens appApiAccessKey $ \app appApiAccessKey -> app { appApiAccessKey }
 
 data Perspective = Pessimistic | Optimistic
 
