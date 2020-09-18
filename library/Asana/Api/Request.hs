@@ -1,5 +1,6 @@
 module Asana.Api.Request
-  ( Single(..)
+  ( HasAsana(..)
+  , Single(..)
   , Page(..)
   , NextPage(..)
   , getAll
@@ -12,7 +13,6 @@ module Asana.Api.Request
 
 import RIO
 
-import Asana.App (AppM, appApiAccessKey)
 import Control.Monad (when)
 import Data.Aeson (FromJSON, ToJSON, Value, genericParseJSON, parseJSON)
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
@@ -27,7 +27,7 @@ import Network.HTTP.Simple
   , getResponseHeader
   , getResponseStatusCode
   , httpJSON
-  , parseRequest
+  , parseRequest_
   , setRequestBodyJSON
   , setRequestMethod
   )
@@ -35,6 +35,9 @@ import Prelude (pred)
 import RIO.Text (Text)
 import qualified RIO.Text as T
 import Text.Read (readMaybe)
+
+class HasAsana env where
+  asanaApiAccessKeyL :: Lens' env Text
 
 maxRequests :: Int
 maxRequests = 50
@@ -70,10 +73,27 @@ instance FromJSON NextPage where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
 
 -- | Naively GET all pages of a paginated resource
-getAll :: FromJSON a => String -> AppM ext [a]
+getAll
+  :: ( MonadUnliftIO m
+     , MonadReader env m
+     , HasLogFunc env
+     , HasAsana env
+     , FromJSON a
+     )
+  => String
+  -> m [a]
 getAll path = getAllParams path []
 
-getAllParams :: FromJSON a => String -> [(String, String)] -> AppM ext [a]
+getAllParams
+  :: ( MonadUnliftIO m
+     , MonadReader env m
+     , HasLogFunc env
+     , HasAsana env
+     , FromJSON a
+     )
+  => String
+  -> [(String, String)]
+  -> m [a]
 getAllParams path params = go Nothing
  where
   go mOffset = do
@@ -82,26 +102,40 @@ getAllParams path params = go Nothing
     maybe (pure d) (fmap (d ++) . go . Just . T.unpack . npOffset) mNextPage
 
 -- | Get a single resource
-getSingle :: FromJSON a => String -> AppM ext a
+getSingle
+  :: ( MonadUnliftIO m
+     , MonadReader env m
+     , HasLogFunc env
+     , HasAsana env
+     , FromJSON a
+     )
+  => String
+  -> m a
 getSingle path = sData <$> get path [] 1 Nothing
 
 get
-  :: FromJSON a
+  :: ( MonadUnliftIO m
+     , MonadReader env m
+     , HasLogFunc env
+     , HasAsana env
+     , FromJSON a
+     )
   => String
   -> [(String, String)]
   -> Int
   -> Maybe String
-  -> AppM ext a
+  -> m a
 get path params limit mOffset = do
-  auth <- asks appApiAccessKey
-  request <-
-    parseRequest
-    $ "https://app.asana.com/api/1.0"
-    <> path
-    <> "?limit="
-    <> show limit -- Ignored on not paging responses
-    <> maybe "" ("&offset=" <>) mOffset
-    <> concatMap (\(k, v) -> "&" <> k <> "=" <> v) params
+  auth <- view asanaApiAccessKeyL
+  let
+    request =
+      parseRequest_
+        $ "https://app.asana.com/api/1.0"
+        <> path
+        <> "?limit="
+        <> show limit -- Ignored on not paging responses
+        <> maybe "" ("&offset=" <>) mOffset
+        <> concatMap (\(k, v) -> "&" <> k <> "=" <> v) params
   response <- retry 50 $ httpJSON (addAuthorization auth request)
   when (300 <= getResponseStatusCode response)
     . logWarn
@@ -109,16 +143,44 @@ get path params limit mOffset = do
     <> display (getResponseStatusCode response)
   pure $ getResponseBody response
 
-put :: ToJSON a => String -> a -> AppM ext Value
+put
+  :: ( MonadUnliftIO m
+     , MonadReader env m
+     , HasLogFunc env
+     , HasAsana env
+     , ToJSON a
+     )
+  => String
+  -> a
+  -> m Value
 put = httpAction "PUT"
 
-post :: ToJSON a => String -> a -> AppM ext Value
+post
+  :: ( MonadUnliftIO m
+     , MonadReader env m
+     , HasLogFunc env
+     , HasAsana env
+     , ToJSON a
+     )
+  => String
+  -> a
+  -> m Value
 post = httpAction "POST"
 
-httpAction :: ToJSON a => ByteString -> String -> a -> AppM ext Value
+httpAction
+  :: ( MonadUnliftIO m
+     , MonadReader env m
+     , HasLogFunc env
+     , HasAsana env
+     , ToJSON a
+     )
+  => ByteString
+  -> String
+  -> a
+  -> m Value
 httpAction verb path payload = do
-  auth <- asks appApiAccessKey
-  request <- parseRequest $ "https://app.asana.com/api/1.0" <> path
+  auth <- view asanaApiAccessKeyL
+  let request = parseRequest_ $ "https://app.asana.com/api/1.0" <> path
 
   response <- retry 10 $ httpJSON
     (setRequestMethod verb . setRequestBodyJSON payload $ addAuthorization
@@ -139,17 +201,22 @@ addAuthorization :: Text -> Request -> Request
 addAuthorization auth =
   addRequestHeader "Authorization" $ "Bearer " <> T.encodeUtf8 auth
 
-retry :: forall a ext . Int -> AppM ext (Response a) -> AppM ext (Response a)
+retry
+  :: forall a m env
+   . (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+  => Int
+  -> m (Response a)
+  -> m (Response a)
 retry attempt go
   | attempt <= 0 = go
   | otherwise = handler =<< go `catch` handleParseError
  where
-  handleParseError :: JSONException -> AppM ext (Response a)
+  handleParseError :: JSONException -> m (Response a)
   handleParseError e = case e of
     JSONParseException _ rsp _ -> orThrow e rsp
     JSONConversionException _ rsp _ -> orThrow e rsp
 
-  orThrow :: Exception e => e -> Response b -> AppM ext (Response a)
+  orThrow :: Exception e => e -> Response b -> m (Response a)
   orThrow e response
     | getResponseStatusCode response == 429 = do
       let seconds = getResponseDelay response
@@ -158,7 +225,7 @@ retry attempt go
       retry (pred attempt) go
     | otherwise = liftIO $ throwIO e
 
-  handler :: Response a -> AppM ext (Response a)
+  handler :: Response a -> m (Response a)
   handler response
     | getResponseStatusCode response == 429 = do
       let seconds = getResponseDelay response

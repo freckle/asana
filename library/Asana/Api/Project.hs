@@ -6,8 +6,7 @@ module Asana.Api.Project
 import RIO
 
 import Asana.Api.Gid (Gid)
-import Asana.Api.Request (getAllParams)
-import Asana.App (AppM)
+import Asana.Api.Request (HasAsana, getAllParams)
 import Data.Aeson (FromJSON, genericParseJSON, parseJSON)
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import RIO.Text (Text)
@@ -24,7 +23,9 @@ data Project = Project
 instance FromJSON Project where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
 
-getProjects :: AppM ext [Project]
+getProjects
+  :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasAsana env)
+  => m [Project]
 getProjects = getAllParams
   (T.unpack "/projects/")
   [("team", "12760955045995"), ("opt_fields", "created_at,name")]

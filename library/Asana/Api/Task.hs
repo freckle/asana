@@ -25,8 +25,7 @@ import RIO
 
 import Asana.Api.Gid (Gid, gidToText)
 import Asana.Api.Named (Named)
-import Asana.Api.Request (getAllParams, getSingle, post, put)
-import Asana.App (AppM)
+import Asana.Api.Request (HasAsana, getAllParams, getSingle, post, put)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
@@ -155,7 +154,10 @@ instance FromJSON Task where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
 
 -- | Return all details for a task by id
-getTask :: Gid -> AppM ext Task
+getTask
+  :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasAsana env)
+  => Gid
+  -> m Task
 getTask taskId = getSingle $ "/tasks/" <> T.unpack (gidToText taskId)
 
 data PostTask = PostTask
@@ -175,7 +177,10 @@ instance ToJSON PostTask where
   toEncoding = genericToEncoding $ aesonPrefix snakeCase
 
 -- | Create a new 'Task'
-postTask :: PostTask -> AppM ext (Result Task)
+postTask
+  :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasAsana env)
+  => PostTask
+  -> m (Result Task)
 postTask body = fmap adData . fromJSON <$> post "/tasks" (ApiData body)
 
 data TaskTypeFilter = TasksOnly | SubtasksOnly | AllTaskTypes
@@ -189,7 +194,10 @@ data SearchWorkspace = SearchWorkspace
   }
 
 -- | Search for tasks within a workspace
-searchWorkspace :: SearchWorkspace -> AppM ext [Named]
+searchWorkspace
+  :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasAsana env)
+  => SearchWorkspace
+  -> m [Named]
 searchWorkspace SearchWorkspace {..} =
   getAllParams
       (T.unpack $ "/workspaces/" <> gidToText swWorkspaceId <> "/tasks/search")
@@ -222,7 +230,11 @@ searchWorkspace SearchWorkspace {..} =
 -- precludes us logging things each time we request an element. So we return
 -- @'Named'@ for now and let the caller use @'getTask'@ themselves.
 --
-getProjectTasks :: Gid -> TaskStatusFilter -> AppM ext [Named]
+getProjectTasks
+  :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasAsana env)
+  => Gid
+  -> TaskStatusFilter
+  -> m [Named]
 getProjectTasks projectId taskStatusFilter = do
   now <- liftIO getCurrentTime
   getAllParams
@@ -239,15 +251,27 @@ formatISO8601 = formatTime defaultTimeLocale (iso8601DateFormat Nothing)
 
 data TaskStatusFilter = IncompletedTasks | AllTasks
 
-getProjectTasksCompletedSince :: Gid -> UTCTime -> AppM ext [Named]
+getProjectTasksCompletedSince
+  :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasAsana env)
+  => Gid
+  -> UTCTime
+  -> m [Named]
 getProjectTasksCompletedSince projectId since = getAllParams
   (T.unpack $ "/projects/" <> gidToText projectId <> "/tasks")
   [("completed_since", formatISO8601 since)]
 
-putCustomField :: Gid -> CustomField -> AppM ext ()
+putCustomField
+  :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasAsana env)
+  => Gid
+  -> CustomField
+  -> m ()
 putCustomField taskId = putCustomFields taskId . CustomFields . pure
 
-putCustomFields :: Gid -> CustomFields -> AppM ext ()
+putCustomFields
+  :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasAsana env)
+  => Gid
+  -> CustomFields
+  -> m ()
 putCustomFields taskId fields =
   void $ put ("/tasks/" <> T.unpack (gidToText taskId)) $ ApiData
     (object ["custom_fields" .= fields])
