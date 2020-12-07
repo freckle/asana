@@ -16,6 +16,7 @@ module Asana.App
   , parsePessimistic
   , parseProjectId
   , parseBugProjectId
+  , parseTeamProjectId
   , parseYear
   , parseImport
   , parseSubprojectName
@@ -127,6 +128,10 @@ parseImport = optional (strOption (long "import" <> help "CSV File to import"))
 parseSubprojectName :: Parser (Maybe String)
 parseSubprojectName =
   optional (strOption (long "subproject" <> help "Optional subproject name"))
+
+parseTeamProjectId :: Parser Gid
+parseTeamProjectId =
+  textToGid . T.pack <$> strOption (long "team-project" <> help "SubProject Id")
 
 promptWith :: MonadIO m => (String -> b) -> String -> m b
 promptWith readVar var = liftIO $ do

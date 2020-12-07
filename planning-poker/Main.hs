@@ -9,30 +9,35 @@ import Data.Csv
 import qualified Data.Text
 import qualified RIO.ByteString.Lazy as RBSL
 import qualified RIO.HashMap as HashMap
-import RIO.List (sortOn)
 import qualified RIO.Text as T
 
 data AppExt = AppExt
   { appProjectId :: Gid
+  , appTeamProjectId :: Gid
   , appImport :: Maybe FilePath
   }
 
 main :: IO ()
 main = do
-  app <- loadAppWith $ AppExt <$> parseProjectId <*> parseImport
+  app <-
+    loadAppWith
+    $ AppExt
+    <$> parseProjectId
+    <*> parseTeamProjectId
+    <*> parseImport
   runApp app $ do
     AppExt {..} <- asks appExt
     case appImport of
-      Nothing -> exportProjectTasks appProjectId
-      Just file -> importProjectTasksFromFile file appProjectId
+      Nothing -> exportProjectTasks appProjectId appTeamProjectId
+      Just file -> importProjectTasksFromFile file appTeamProjectId
 
-exportProjectTasks :: Gid -> AppM AppExt ()
-exportProjectTasks projectId = do
-  projectTasks <- getProjectTasks projectId AllTasks
-
-  tasks <- pooledForConcurrentlyN maxRequests projectTasks (getTask . nGid)
-
-  let planningPokerTasks = map toPlanningPokerTask (sortByPriority tasks)
+exportProjectTasks :: Gid -> Gid -> AppM AppExt ()
+exportProjectTasks projectId teamProjectId = do
+  planningPokerTasks <- do
+    taskIds <- getProjectTasks projectId AllTasks
+    allTasks <- pooledForConcurrentlyN maxRequests taskIds (getTask . nGid)
+    pure $ flip mapMaybe allTasks $ \t@Task {..} -> toPlanningPokerTask t
+      <$ guard (AsanaReference teamProjectId `elem` tProjects)
 
   liftIO
     . RBSL.writeFile "planning-poker-export.csv"
@@ -174,9 +179,6 @@ extractCost :: Task -> Maybe Integer
 extractCost t = extractNumberField "cost" t >>= \case
   CustomNumber _ _ mCost -> round <$> mCost
   _ -> Nothing
-
-sortByPriority :: [Task] -> [Task]
-sortByPriority = sortOn (Down . extractPriority)
 
 extractPriority :: Task -> Maybe Integer
 extractPriority t = extractNumberField "Priority" t >>= \case
