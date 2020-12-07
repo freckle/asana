@@ -23,7 +23,7 @@ module Asana.Api.Task
 
 import RIO
 
-import Asana.Api.Gid (Gid, gidToText)
+import Asana.Api.Gid (AsanaReference(..), Gid, gidToText)
 import Asana.Api.Named (Named)
 import Asana.Api.Request (HasAsana, getAllParams, getSingle, post, put)
 import Control.Monad.IO.Class (liftIO)
@@ -147,6 +147,7 @@ data Task = Task
   , tGid :: Gid
   , tResourceSubtype :: ResourceSubtype
   , tNotes :: Text
+  , tProjects :: [AsanaReference]
   }
   deriving (Eq, Generic, Show)
 
