@@ -46,7 +46,7 @@ main = do
               T.toLower (nName mProject) == T.toLower (T.pack subprojectName)
 
     stories <- fmap catMaybes . for tasks $ \task -> runMaybeT $ do
-      story@Story {..} <- MaybeT $ pure $ fromTask (Just projectId) task
+      story@Story {..} <- MaybeT $ pure $ fromTask Nothing task
       let url = "<" <> storyUrl projectId story <> ">"
       MaybeT $ do
         logInfo . display $ url <> " " <> sName
@@ -62,11 +62,7 @@ main = do
           . logWarn
           $ "Story is not costed: "
           <> display url
-        case sAssignee of
-          Nothing -> do
-            logWarn $ "Story has no assignee: " <> display url
-            pure Nothing
-          Just _ -> mayCanDo story
+        pure $ Just story
 
     let
       isCarried = isJust . sCarryIn
