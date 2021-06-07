@@ -7,13 +7,11 @@ module Asana.App
   , AppWith(..)
   , AppM
   , Perspective(..)
-  , loadApp
   , loadAppWith
   , runApp
   , liftIO
   -- * Argument parsers
   , parseIgnoreNoCanDo
-  , parsePessimistic
   , parseProjectId
   , parseBugProjectId
   , parseTeamProjectId
@@ -80,9 +78,6 @@ runApp app action = do
     logInfo "Starting app"
     action
 
-loadApp :: IO App
-loadApp = loadAppWith $ pure ()
-
 loadAppWith :: forall ext . Parser ext -> IO (AppWith ext)
 loadAppWith parseExt = do
   loadEnvFrom ".env.asana"
@@ -104,9 +99,6 @@ loadAppWith parseExt = do
 
 parseIgnoreNoCanDo :: Parser Bool
 parseIgnoreNoCanDo = flag False True (long "ignore-no-can-do")
-
-parsePessimistic :: Parser Perspective
-parsePessimistic = flag Optimistic Pessimistic (long "pessimistic")
 
 parseProjectId :: Parser Gid
 parseProjectId =
