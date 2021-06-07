@@ -13,11 +13,8 @@ module Asana.Api.Request
 
 import RIO
 
-import Control.Monad (when)
 import Data.Aeson (FromJSON, ToJSON, Value, genericParseJSON, parseJSON)
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
-import Data.Maybe (fromMaybe)
-import Data.Monoid ((<>))
 import Network.HTTP.Simple
   ( JSONException(JSONConversionException, JSONParseException)
   , Request
@@ -32,9 +29,7 @@ import Network.HTTP.Simple
   , setRequestMethod
   )
 import Prelude (pred)
-import RIO.Text (Text)
 import qualified RIO.Text as T
-import Text.Read (readMaybe)
 
 class HasAsana env where
   asanaApiAccessKeyL :: Lens' env Text
@@ -46,7 +41,8 @@ maxRequests = 50
 newtype Single a = Single
   { sData :: a
   }
-  deriving (Eq, Generic, Show)
+  deriving newtype (Eq, Show)
+  deriving stock Generic
 
 instance FromJSON a => FromJSON (Single a) where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
@@ -56,7 +52,7 @@ data Page a = Page
   { pData :: [a]
   , pNextPage :: Maybe NextPage
   }
-  deriving (Eq, Generic, Show)
+  deriving stock (Eq, Generic, Show)
 
 instance FromJSON a => FromJSON (Page a) where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
@@ -67,7 +63,7 @@ data NextPage = NextPage
   , npPath :: Text
   , npUri :: Text
   }
-  deriving (Eq, Generic, Show)
+  deriving stock (Eq, Generic, Show)
 
 instance FromJSON NextPage where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase

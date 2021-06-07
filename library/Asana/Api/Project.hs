@@ -9,7 +9,6 @@ import Asana.Api.Gid (Gid)
 import Asana.Api.Request (HasAsana, getAllParams)
 import Data.Aeson (FromJSON, genericParseJSON, parseJSON)
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
-import RIO.Text (Text)
 import qualified RIO.Text as T
 import RIO.Time (UTCTime)
 

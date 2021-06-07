@@ -11,7 +11,6 @@ import RIO
 import Data.Aeson
   (FromJSON(..), FromJSONKey, ToJSON, ToJSONKey, genericParseJSON)
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
-import RIO.Text (Text)
 
 newtype Gid = Gid { gidToText :: Text }
   deriving stock (Eq, Generic, Show)

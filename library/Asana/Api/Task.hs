@@ -26,14 +26,11 @@ import RIO
 import Asana.Api.Gid (AsanaReference(..), Gid, gidToText)
 import Asana.Api.Named (Named)
 import Asana.Api.Request (HasAsana, getAllParams, getSingle, post, put)
-import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import Data.List (find, intercalate)
 import Data.Scientific (Scientific)
-import Data.Semigroup ((<>))
 import qualified RIO.HashMap as HashMap
-import RIO.Text (Text)
 import qualified RIO.Text as T
 import RIO.Time
   ( FormatTime
@@ -47,7 +44,8 @@ import RIO.Time
 newtype ApiData a = ApiData
   { adData :: a
   }
-  deriving stock (Generic, Show, Eq)
+  deriving newtype (Show, Eq)
+  deriving stock Generic
 
 instance FromJSON a => FromJSON (ApiData a) where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
@@ -62,7 +60,7 @@ data CustomField
   | CustomEnum Gid Text [EnumOption] (Maybe Text)
   | CustomText Gid Text (Maybe Text)
   | Other -- ^ Unexpected types dumped here
-  deriving (Eq, Generic, Show)
+  deriving stock (Eq, Generic, Show)
 
 newtype CustomFields = CustomFields { getCustomFields :: [CustomField] }
   deriving stock (Show, Eq)
@@ -80,7 +78,7 @@ data EnumOption = EnumOption
   { eoGid :: Gid
   , eoName :: Text
   }
-  deriving (Eq, Generic, Show)
+  deriving stock (Eq, Generic, Show)
 
 instance FromJSON EnumOption where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
@@ -124,13 +122,13 @@ data Membership = Membership
   { mProject :: Named
   , mSection :: Maybe Named
   }
-  deriving (Eq, Generic, Show)
+  deriving stock (Eq, Generic, Show)
 
 instance FromJSON Membership where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
 
 data ResourceSubtype = DefaultTask | Milestone | Section
-  deriving (Eq, Generic, Show)
+  deriving stock (Eq, Generic, Show)
 
 instance FromJSON ResourceSubtype where
   parseJSON =
@@ -149,7 +147,7 @@ data Task = Task
   , tNotes :: Text
   , tProjects :: [AsanaReference]
   }
-  deriving (Eq, Generic, Show)
+  deriving stock (Eq, Generic, Show)
 
 instance FromJSON Task where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase
@@ -168,7 +166,7 @@ data PostTask = PostTask
   , ptNotes :: Text
   , ptParent :: Maybe Gid
   }
-  deriving Generic
+  deriving stock Generic
 
 instance FromJSON PostTask where
   parseJSON = genericParseJSON $ aesonPrefix snakeCase

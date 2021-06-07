@@ -6,8 +6,6 @@ import Asana.Api
 import Asana.Api.Gid (Gid)
 import Asana.App
 import Asana.Story
-import Control.Monad (foldM, when)
-import Data.Maybe (isNothing)
 import Data.Semigroup.Generic (gmappend, gmempty)
 import RIO.Time
 
@@ -20,7 +18,7 @@ data Totals = Totals
   , tReproduced :: [Story]
   , tNotReproduced :: [Story]
   }
-  deriving (Generic)
+  deriving stock Generic
 
 instance Semigroup Totals where
   (<>) = gmappend

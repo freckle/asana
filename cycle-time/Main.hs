@@ -11,7 +11,6 @@ import Asana.Api.Gid (Gid, gidToText)
 import Asana.Api.Project (Project(pCreatedAt, pGid, pName), getProjects)
 import Asana.App
   (AppM, appExt, loadAppWith, parseBugProjectId, parseYear, runApp)
-import Control.Monad (when)
 import qualified Data.Csv as Csv
 import Data.Foldable (maximum, minimum)
 import Data.List (intercalate, nub)

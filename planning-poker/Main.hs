@@ -112,7 +112,7 @@ data PlanningPokerTask = PlanningPokerTask
   , acceptanceCriteria :: Text
   , storyPoints :: Maybe Integer
   }
-  deriving stock (Show)
+  deriving stock Show
 
 instance FromNamedRecord PlanningPokerTask where
   parseNamedRecord m =
@@ -168,6 +168,7 @@ toPlanningPokerTask task@Task {..} = PlanningPokerTask
   , storyPoints = extractCost task
   }
 
+describeMemberships :: [Membership] -> Text
 describeMemberships = ul . mconcat . map describeMembership
  where
   ul text = "<ul>" <> text <> "</ul>"

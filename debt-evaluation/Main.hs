@@ -27,10 +27,7 @@ import Asana.Api
 import Asana.Api.Gid (Gid, textToGid)
 import Asana.App
 import Asana.Story
-import Control.Monad (guard, when)
 import Data.Foldable (maximum, minimum)
-import Data.Maybe (mapMaybe)
-import RIO.Text (Text)
 import Text.Printf (printf)
 
 newtype AppExt = AppExt
@@ -44,7 +41,7 @@ data Point = Point
   , pImpact :: Double
   , pEffort :: Double
   }
-  deriving Show
+  deriving stock Show
 
 data Priority
   = ThankLess
@@ -61,7 +58,7 @@ data Priority
   | Major
   -- ^ Major projects give good returns, but they are time-consuming. This means
   -- that one major project can "crowd out" many quick wins.
-  deriving (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord)
 
 main :: IO ()
 main = do

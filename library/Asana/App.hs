@@ -29,9 +29,7 @@ import RIO
 
 import Asana.Api.Gid (Gid, textToGid)
 import Asana.Api.Request (HasAsana(..))
-import Control.Monad.IO.Class (liftIO)
 import Data.Char (toLower)
-import Data.Semigroup ((<>))
 import LoadEnv (loadEnvFrom)
 import Options.Applicative
   ( Parser
@@ -47,10 +45,9 @@ import Options.Applicative
   , progDesc
   , strOption
   )
-import RIO.Text (Text)
 import qualified RIO.Text as T
 import System.Environment (getEnv)
-import System.IO (getLine, putStr, stderr)
+import System.IO (getLine, putStr)
 
 data AppWith ext = App
   { appApiAccessKey :: Text
