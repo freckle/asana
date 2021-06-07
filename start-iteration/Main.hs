@@ -7,11 +7,8 @@ import Asana.Api
 import Asana.Api.Gid (Gid)
 import Asana.App
 import Asana.Story
-import Control.Monad (unless, when)
 import Control.Monad.Trans.Maybe (MaybeT(MaybeT), runMaybeT)
-import Data.List (partition, tail, zipWith)
-import Data.Maybe (isJust, isNothing, mapMaybe)
-import Data.Semigroup ((<>))
+import Data.List (partition, tail)
 import qualified RIO.Text as T
 
 data AppExt = AppExt

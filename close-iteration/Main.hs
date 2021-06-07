@@ -7,9 +7,7 @@ import Asana.Api
 import Asana.Api.Gid (Gid)
 import Asana.App
 import Asana.Story
-import Control.Monad (when)
-import Data.Maybe (isJust, isNothing)
-import Data.Semigroup (Sum(..), (<>))
+import Data.Semigroup (Sum(..))
 import Data.Semigroup.Generic (gmappend, gmempty)
 import qualified RIO.Text as T
 
@@ -98,7 +96,7 @@ updateCompletedPoints :: Gid -> [Task] -> AppM AppExt ()
 updateCompletedPoints projectId tasks =
   pooledForConcurrentlyN_ maxRequests tasks $ \task -> do
     let mStory = fromTask (Just projectId) task
-    for_ mStory $ \story@Story {..} -> case getCompletedPoints story of
+    for_ mStory $ \story -> case getCompletedPoints story of
       Nothing ->
         logWarn
           . display
@@ -180,7 +178,8 @@ data CompletionStats = CompletionStats
   , incompleteCompletedPoints :: Sum Integer
   , incompleteCarryOver :: Sum Integer
   , commitment :: Sum Integer
-  } deriving (Generic)
+  }
+  deriving stock Generic
 
 instance Semigroup CompletionStats where
   (<>) = gmappend

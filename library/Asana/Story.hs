@@ -9,10 +9,7 @@ import RIO
 
 import Asana.Api
 import Asana.Api.Gid (Gid, gidToText)
-import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Scientific (Scientific)
-import Data.Semigroup ((<>))
-import RIO.Text (Text)
 import qualified RIO.Text as T
 import RIO.Time (UTCTime)
 
@@ -32,7 +29,7 @@ data Story = Story
   , sCapitalized :: Bool
   , sGid :: Gid
   }
-  deriving Show
+  deriving stock Show
 
 fromTask
   :: Maybe Gid
