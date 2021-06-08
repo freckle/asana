@@ -15,6 +15,7 @@ module Asana.Api.Task
   , postTask
   , putCustomField
   , putCustomFields
+  , putCompleted
   , searchWorkspace
   , taskUrl
   , extractNumberField
@@ -274,6 +275,15 @@ putCustomFields
 putCustomFields taskId fields =
   void $ put ("/tasks/" <> T.unpack (gidToText taskId)) $ ApiData
     (object ["custom_fields" .= fields])
+
+putCompleted
+  :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasAsana env)
+  => Gid
+  -> Bool
+  -> m ()
+putCompleted taskId completed =
+  void $ put ("/tasks/" <> T.unpack (gidToText taskId)) $ ApiData
+    (object ["completed" .= completed])
 
 taskUrl :: Task -> Text
 taskUrl Task {..} = "https://app.asana.com/0/0/" <> gidToText tGid <> "/f"
