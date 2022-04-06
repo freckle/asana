@@ -31,9 +31,9 @@ import Data.Aeson
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import Data.List (find, intercalate)
 import Data.Scientific (Scientific)
+import Data.Time.ISO8601 (formatISO8601)
 import qualified RIO.HashMap as HashMap
 import qualified RIO.Text as T
-import Data.Time.ISO8601 (formatISO8601)
 import RIO.Time (UTCTime, getCurrentTime)
 
 newtype ApiData a = ApiData
