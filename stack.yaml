@@ -1,4 +1,4 @@
-resolver: lts-17.10
+resolver: lts-19.1
 packages:
 - .
 # NB. -fignore-optim-changes can get in the way of profiling projects. To
