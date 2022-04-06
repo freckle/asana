@@ -71,9 +71,12 @@ instance ToJSON CustomFields where
   toJSON (CustomFields fields) = object $ concatMap toPair fields
    where
     toPair = \case
-      CustomNumber gid _ n -> [gidToText gid .= n]
-      e@(CustomEnum gid _ _ _) -> [gidToText gid .= customEnumId e]
+      CustomNumber gid _ n -> [gidToKey gid .= n]
+      e@(CustomEnum gid _ _ _) -> [gidToKey gid .= customEnumId e]
       _ -> []
+
+    -- fromString will give us Text for aeson-1.x and Key for aeson-2.x
+    gidToKey = fromString . T.unpack . gidToText
 
 data EnumOption = EnumOption
   { eoGid :: Gid
