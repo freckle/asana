@@ -33,14 +33,8 @@ import Data.List (find, intercalate)
 import Data.Scientific (Scientific)
 import qualified RIO.HashMap as HashMap
 import qualified RIO.Text as T
-import RIO.Time
-  ( FormatTime
-  , UTCTime
-  , defaultTimeLocale
-  , formatTime
-  , getCurrentTime
-  , iso8601DateFormat
-  )
+import Data.Time.ISO8601 (formatISO8601)
+import RIO.Time (UTCTime, getCurrentTime)
 
 newtype ApiData a = ApiData
   { adData :: a
@@ -248,9 +242,6 @@ getProjectTasks projectId taskStatusFilter = do
   completedSince now = case taskStatusFilter of
     AllTasks -> []
     IncompletedTasks -> [("completed_since", formatISO8601 now)]
-
-formatISO8601 :: FormatTime t => t -> String
-formatISO8601 = formatTime defaultTimeLocale (iso8601DateFormat Nothing)
 
 data TaskStatusFilter = IncompletedTasks | AllTasks
 

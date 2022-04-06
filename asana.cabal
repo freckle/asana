@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9eab6b029789b88d7c29e67442668f6bdf0194c8af34ebc5a3cdb676cfb3ab26
+-- hash: 680c9bba3962653a9aeac72af4737a3fe4941860078c9926893d2382d7e0fe6e
 
 name:           asana
 version:        0.0.0
@@ -56,6 +56,7 @@ library
     , aeson-casing
     , base
     , http-conduit
+    , iso8601-time
     , load-env
     , optparse-applicative
     , rio
