@@ -25,6 +25,19 @@ instance FromJSON Project where
 getProjects
   :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasAsana env)
   => m [Project]
-getProjects = getAllParams
+getProjects = mconcat <$> traverse
+  getProjectsForTeam
+  [engineeringTeam, studentTeam, educatorTeam, platformTeam]
+ where
+  engineeringTeam = "12760955045995"
+  studentTeam = "1201325186562301"
+  educatorTeam = "1201325186562310"
+  platformTeam = "1200567751522718"
+
+getProjectsForTeam
+  :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasAsana env)
+  => String
+  -> m [Project]
+getProjectsForTeam team = getAllParams
   (T.unpack "/projects/")
-  [("team", "12760955045995"), ("opt_fields", "created_at,name")]
+  [("team", team), ("opt_fields", "created_at,name")]

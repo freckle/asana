@@ -10,7 +10,7 @@ import Asana.Api
 import Asana.Api.Gid (Gid, gidToText)
 import Asana.Api.Project (Project(pCreatedAt, pGid, pName), getProjects)
 import Asana.App
-  (AppM, appExt, loadAppWith, parseBugProjectId, parseYear, runApp)
+  (AppM, appExt, loadAppWith, parseBugProjectId, parseDate, runApp)
 import qualified Data.Csv as Csv
 import Data.Foldable (maximum, minimum)
 import Data.List (intercalate, nub)
@@ -19,7 +19,7 @@ import qualified Data.Vector as V
 import RIO.ByteString (writeFile)
 import RIO.ByteString.Lazy (toStrict)
 import RIO.Text (isPrefixOf, unpack)
-import RIO.Time (NominalDiffTime, diffUTCTime, toGregorian, utctDay)
+import RIO.Time (NominalDiffTime, UTCTime, diffUTCTime)
 import Statistics.Quantile (median, medianUnbiased)
 import Statistics.Sample (kurtosis, mean, skewness, stdDev)
 import Statistics.Sample.Histogram (histogram)
@@ -27,17 +27,26 @@ import System.IO.Temp (emptySystemTempFile)
 import Text.Printf (printf)
 
 data AppExt = AppExt
-  { appYear :: Integer
+  { appFrom :: UTCTime
+  , appTo :: UTCTime
   , appBugProject :: Gid
   }
 
 main :: IO ()
 main = do
-  app <- loadAppWith $ AppExt <$> parseYear <*> parseBugProjectId
+  app <-
+    loadAppWith
+    $ AppExt
+    <$> parseDate "from"
+    <*> parseDate "to"
+    <*> parseBugProjectId
   runApp app $ do
     logDebug "Fetch projects"
-    year <- asks $ appYear . appExt
-    projects <- filter (approvedProject year) <$> getProjects
+    dateFrom <- asks $ appFrom . appExt
+    dateTo <- asks $ appTo . appExt
+
+    projects <- filter (approvedProject dateFrom dateTo) <$> getProjects
+    logInfo $ fromString $ show $ pName <$> projects
 
     taskGids <- fetchRelevantTaskGids projects
 
@@ -50,12 +59,12 @@ main = do
         mayCycleTime
         tasks
 
-    when (null cycleTimes) $ logWarn "No cycle time to compute"
+    when (null cycleTimes) $ logWarn "No lead time to compute"
 
     logDebug "Write histogram CSV"
     writeHistogramCsv cycleTimes
 
-    logDebug "Display Cycle Time"
+    logDebug "Display Lead Time"
     let
       fmt = intercalate
         "\n"
@@ -89,11 +98,18 @@ zscoreFilter p =
 toDays :: Double -> Int
 toDays = floor . (/ 86400)
 
-approvedProject :: Integer -> Project -> Bool
-approvedProject compareYear project = year == compareYear && isPrefixOf
-  "Iteration"
-  (pName project)
-  where (year, _, _) = toGregorian $ utctDay (pCreatedAt project)
+approvedProject :: UTCTime -> UTCTime -> Project -> Bool
+approvedProject dateFrom dateTo project =
+  dateFrom <= createdAt && createdAt < dateTo && isValidIteration
+    (pName project)
+  where createdAt = pCreatedAt project
+
+isValidIteration :: Text -> Bool
+isValidIteration name =
+  isPrefixOf "Iteration" name
+    || isPrefixOf "Student" name
+    || isPrefixOf "Educator" name
+    || isPrefixOf "Platform" name
 
 mayCycleTime :: Task -> Maybe NominalDiffTime
 mayCycleTime task = do
