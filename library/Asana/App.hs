@@ -16,6 +16,7 @@ module Asana.App
   , parseBugProjectId
   , parseTeamProjectId
   , parseYear
+  , parseDate
   , parseImport
   , parseSubprojectName
   -- * Prompts
@@ -44,6 +45,7 @@ import Options.Applicative
   , strOption
   )
 import qualified RIO.Text as T
+import RIO.Time
 import System.Environment (getEnv)
 import System.IO (getLine, putStr)
 
@@ -110,6 +112,10 @@ parseBugProjectId =
 
 parseYear :: Parser Integer
 parseYear = option auto (long "year" <> help "The year to view")
+
+parseDate :: String -> Parser UTCTime
+parseDate name = parseTimeOrError False defaultTimeLocale "%Y-%m-%d"
+  <$> strOption (long name <> help "[UTCTime]")
 
 parseImport :: Parser (Maybe FilePath)
 parseImport = optional (strOption (long "import" <> help "CSV File to import"))
