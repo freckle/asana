@@ -21,14 +21,18 @@
 --
 module Main (main) where
 
-import RIO
+import Asana.Prelude
 
-import Asana.Api
+import Asana.Api.CustomField
 import Asana.Api.Gid (Gid, textToGid)
+import Asana.Api.Named
+import Asana.Api.Request
+import Asana.Api.Task
 import Asana.App
 import Asana.Story
-import Data.Foldable (maximum, minimum)
+import Data.String (fromString)
 import Text.Printf (printf)
+import UnliftIO.Async (pooledForConcurrentlyN, pooledForConcurrentlyN_)
 
 newtype AppExt = AppExt
   { appProjectId :: Gid
@@ -74,8 +78,9 @@ main = do
     stories <- processStories $ \Named {..} -> do
       mStory <- fromTask Nothing <$> getTask nGid
       for mStory $ \story -> do
-        let url = "<" <> storyUrl projectId story <> ">"
-        logInfo . display $ url <> " " <> sName story
+        logInfo
+          $ "Story"
+          :# ["url" .= storyUrl projectId story, "name" .= sName story]
         pure story
 
     logDebug "Calculate points"

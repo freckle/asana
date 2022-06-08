@@ -4,27 +4,31 @@
 --
 module Main (main) where
 
-import RIO
+import Asana.Prelude
 
-import Asana.Api
 import Asana.Api.Gid (Gid, gidToText)
-import Asana.Api.Project (Project(pCreatedAt, pGid, pName), getProjects)
+import Asana.Api.Named
+import Asana.Api.Project (Project(..))
+import Asana.Api.Request
+import Asana.Api.Task
 import Asana.App
   (AppM, appExt, loadAppWith, parseBugProjectId, parseDate, runApp)
+import qualified Data.ByteString as BS
+import Data.ByteString.Lazy (toStrict)
 import qualified Data.Csv as Csv
-import Data.Foldable (maximum, minimum)
 import Data.List (intercalate, nub)
 import qualified Data.Map.Strict as Map
+import Data.String (fromString)
+import Data.Text (isPrefixOf)
+import Data.Time (NominalDiffTime, UTCTime, diffUTCTime)
+import Data.Vector (Vector)
 import qualified Data.Vector as V
-import RIO.ByteString (writeFile)
-import RIO.ByteString.Lazy (toStrict)
-import RIO.Text (isPrefixOf, unpack)
-import RIO.Time (NominalDiffTime, UTCTime, diffUTCTime)
 import Statistics.Quantile (median, medianUnbiased)
 import Statistics.Sample (kurtosis, mean, skewness, stdDev)
 import Statistics.Sample.Histogram (histogram)
 import System.IO.Temp (emptySystemTempFile)
 import Text.Printf (printf)
+import UnliftIO.Async (pooledForConcurrentlyN)
 
 data AppExt = AppExt
   { appFrom :: UTCTime
@@ -122,8 +126,8 @@ writeHistogramCsv :: Vector Double -> AppM ext ()
 writeHistogramCsv cycleTimes = do
   filePath <- liftIO $ emptySystemTempFile ".csv"
   let histogramCsv = uncurry V.zip $ histogram @_ @_ @Double 100 cycleTimes
-  writeFile filePath . toStrict . Csv.encode $ V.toList histogramCsv
-  logInfo . fromString $ "Histogram written to " <> filePath
+  liftIO $ BS.writeFile filePath $ toStrict $ Csv.encode $ V.toList histogramCsv
+  logInfo $ "Histogram written" :# ["path" .= filePath]
 
 writeTaskCsv :: [Task] -> AppM ext ()
 writeTaskCsv tasks = do
@@ -136,12 +140,13 @@ writeTaskCsv tasks = do
         , maybe "" (show . realToFrac @_ @Double) $ mayCycleTime task
         )
       ]
-  writeFile filePath
-    . toStrict
-    . Csv.encodeByName (V.fromList ["name", "task ID", "cycle time"])
+  liftIO
+    $ BS.writeFile filePath
+    $ toStrict
+    $ Csv.encodeByName (V.fromList ["name", "task ID", "cycle time"])
     $ toRecord
     <$> tasks
-  logInfo . fromString $ "Tasks written to " <> filePath
+  logInfo $ "Tasks written" :# ["path" .= filePath]
 
 fetchRelevantTaskGids :: Traversable t => t Project -> AppM AppExt [Gid]
 fetchRelevantTaskGids projects = do
@@ -156,3 +161,23 @@ fetchRelevantTaskGids projects = do
   bugTaskGids <- fmap nGid <$> getProjectTasks bugProjectGid AllTasks
 
   pure $ filter (`notElem` bugTaskGids) taskGids
+
+getProjects
+  :: (MonadUnliftIO m, MonadLogger m, MonadReader env m, HasAsanaAccessKey env)
+  => m [Project]
+getProjects = mconcat <$> traverse
+  getProjectsForTeam
+  [engineeringTeam, studentTeam, educatorTeam, platformTeam]
+ where
+  engineeringTeam = "12760955045995"
+  studentTeam = "1201325186562301"
+  educatorTeam = "1201325186562310"
+  platformTeam = "1200567751522718"
+
+getProjectsForTeam
+  :: (MonadUnliftIO m, MonadLogger m, MonadReader env m, HasAsanaAccessKey env)
+  => String
+  -> m [Project]
+getProjectsForTeam team = getAllParams
+  (unpack "/projects/")
+  [("team", team), ("opt_fields", "created_at,name")]

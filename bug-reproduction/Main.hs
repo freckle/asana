@@ -1,13 +1,14 @@
 module Main (main) where
 
-import RIO
+import Asana.Prelude
 
-import Asana.Api
 import Asana.Api.Gid (Gid)
+import Asana.Api.Named
+import Asana.Api.Task
 import Asana.App
 import Asana.Story
 import Data.Semigroup.Generic (gmappend, gmempty)
-import RIO.Time
+import Data.Time
 
 newtype AppExt = AppExt
   { appProjectId :: Gid
@@ -52,22 +53,22 @@ main = do
               -- Only report assigned tasks; a cheap way to avoid non-bugs that were
               -- marked completed to make them go away.
               Just assignee | sCompleted -> do
-                when (isNothing sReproduced) $ logWarn $ foldMap
-                  ("\n" <>)
-                  [ "Story " <> display sName
-                  , " by " <> display (nName assignee)
-                  , " completed " <> displayShow sCompletedAt
-                  , " lacks reproduced information"
-                  ]
+                when (isNothing sReproduced)
+                  $ logWarn
+                  $ "Story lacks reproduced information"
+                  :# [ "story" .= sName
+                     , "assignee" .= nName assignee
+                     , "completedAt" .= sCompletedAt
+                     ]
                 pure $ toTotals story
               _ -> pure mempty
 
             pure $ totals <> storyTotals
 
     totals <- foldM accumulateStory mempty tasks
-    hPutBuilder stdout . getUtf8Builder $ foldMap
+    liftIO $ putStrLn $ foldMap
       ("\n" <>)
-      [ "Unknown: " <> display (length $ tUnknown totals)
-      , "Reproduced: " <> display (length $ tReproduced totals)
-      , "Not reproduced: " <> display (length $ tNotReproduced totals)
+      [ "Unknown: " <> show (length $ tUnknown totals)
+      , "Reproduced: " <> show (length $ tReproduced totals)
+      , "Not reproduced: " <> show (length $ tNotReproduced totals)
       ]

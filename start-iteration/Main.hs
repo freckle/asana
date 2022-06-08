@@ -1,15 +1,19 @@
 {-# LANGUAGE NamedFieldPuns #-}
+
 module Main (main) where
 
-import RIO
+import Asana.Prelude
 
-import Asana.Api
 import Asana.Api.Gid (Gid)
+import Asana.Api.Named
+import Asana.Api.Request
+import Asana.Api.Task
 import Asana.App
 import Asana.Story
 import Control.Monad.Trans.Maybe (MaybeT(MaybeT), runMaybeT)
-import Data.List (partition, tail)
-import qualified RIO.Text as T
+import Data.List (partition)
+import qualified Data.Text as T
+import UnliftIO.Async (pooledForConcurrentlyN)
 
 data AppExt = AppExt
   { appProjectId :: Gid
@@ -46,22 +50,22 @@ main = do
       story@Story {..} <- MaybeT $ pure $ fromTask (Just projectId) task
       let url = "<" <> storyUrl projectId story <> ">"
       MaybeT $ do
-        logInfo . display $ url <> " " <> sName
+        logInfo $ "Story" :# ["name" .= sName]
         when sCompleted
-          . logWarn
+          $ logWarn
           $ "Completed story in iteration: "
-          <> display url
+          :# ["url" .= url]
         unless (maybe True isFib sCost)
-          . logWarn
-          $ "Story's cost is not a Fibonacci number: "
-          <> display url
+          $ logWarn
+          $ "Story's cost is not a Fibonacci number"
+          :# ["url" .= url]
         when (isNothing sCost)
-          . logWarn
-          $ "Story is not costed: "
-          <> display url
+          $ logWarn
+          $ "Story is not costed"
+          :# ["url" .= url]
         case sAssignee of
           Nothing -> do
-            logWarn $ "Story has no assignee: " <> display url
+            logWarn $ "Story has no assignee" :# ["url" .= url]
             pure Nothing
           Just _ -> mayCanDo story
 
@@ -73,21 +77,17 @@ main = do
       carriedCost = sum $ mapMaybe sCarryIn carriedStories
       carriedNum = length carriedStories
 
-    hPutBuilder stdout . getUtf8Builder $ foldMap
+    liftIO $ putStrLn $ foldMap
       ("\n" <>)
       [ "New Story Points"
-      , "  "
-      <> display iterationCost
-      <> " ("
-      <> display iterationNum
-      <> " stories)"
+      , "  " <> show iterationCost <> " (" <> show iterationNum <> " stories)"
       , "Carryover Story Points"
-      , "  " <> display carriedCost <> " (" <> display carriedNum <> " stories)"
+      , "  " <> show carriedCost <> " (" <> show carriedNum <> " stories)"
       , "Total"
       , "  "
-      <> display (iterationCost + carriedCost)
+      <> show (iterationCost + carriedCost)
       <> " ("
-      <> display (iterationNum + carriedNum)
+      <> show (iterationNum + carriedNum)
       <> " stories)"
       ]
 
@@ -100,11 +100,11 @@ mayCanDo story = do
   let url = makeUrl projectId story
   case sCanDo story of
     Nothing -> do
-      logWarn $ "Story does not have a 'can do?': " <> display url
+      logWarn $ "Story does not have a 'can do?'" :# ["url" .= url]
       ignoreNoCanDo <- asks $ appIgnoreNoCanDo . appExt
       pure $ if ignoreNoCanDo then Nothing else Just story
     Just canDo -> do
-      unless canDo . logWarn $ "Story marked as can't do: " <> display url
+      unless canDo $ logWarn $ "Story marked as can't do" :# ["url" .= url]
       pure $ Just story
 
 fibs :: [Integer]

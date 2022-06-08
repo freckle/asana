@@ -24,11 +24,16 @@ module Asana.App
   , readBool
   ) where
 
-import RIO
+import Asana.Prelude
 
 import Asana.Api.Gid (Gid, textToGid)
-import Asana.Api.Request (HasAsana(..))
+import Asana.Api.Request (AsanaAccessKey(..), HasAsanaAccessKey(..))
+import Blammo.Logging.LogSettings
+import Blammo.Logging.LogSettings.LogLevels (defaultLogLevels, newLogLevels)
 import Data.Char (toLower)
+import qualified Data.Text as T
+import Data.Time
+import qualified Env
 import LoadEnv (loadEnvFrom)
 import Options.Applicative
   ( Parser
@@ -41,63 +46,91 @@ import Options.Applicative
   , info
   , long
   , option
+  , optional
   , progDesc
   , strOption
+  , (<|>)
   )
-import qualified RIO.Text as T
-import RIO.Time
-import System.Environment (getEnv)
-import System.IO (getLine, putStr)
+import System.IO (hFlush, stdout)
 
 data AppWith ext = App
-  { appApiAccessKey :: Text
-  , appLogLevel :: LogLevel
-  , logFunc :: LogFunc
+  { appAsanaAccessKey :: AsanaAccessKey
+  , appLogger :: Logger
   , appExt :: ext
   }
 
 type App = AppWith ()
 
-instance HasLogFunc (AppWith ext) where
-  logFuncL = lens logFunc (\app logFunc -> app { logFunc })
+instance HasLogger (AppWith ext) where
+  loggerL = lens appLogger $ \x y -> x { appLogger = y }
 
-instance HasAsana (AppWith ext) where
-  asanaApiAccessKeyL =
-    lens appApiAccessKey $ \app appApiAccessKey -> app { appApiAccessKey }
+instance HasAsanaAccessKey (AppWith ext) where
+  asanaAccessKeyL =
+    lens appAsanaAccessKey $ \app appAsanaAccessKey -> app { appAsanaAccessKey }
 
 data Perspective = Pessimistic | Optimistic
 
-type AppM ext = RIO (AppWith ext)
+type AppM ext a = ReaderT (AppWith ext) (LoggingT IO) a
 
 runApp :: AppWith ext -> AppM ext a -> IO a
-runApp app action = do
-  logOptions <-
-    setLogUseLoc False
-    . setLogUseTime False
-    . setLogMinLevel (appLogLevel app)
-    <$> logOptionsHandle stderr True
-  withLogFunc logOptions $ \logFunc -> runRIO app { logFunc } $ do
-    logInfo "Starting app"
-    action
+runApp app action = runLoggerLoggingT app $ flip runReaderT app $ do
+  logInfo "Starting app"
+  action
 
 loadAppWith :: forall ext . Parser ext -> IO (AppWith ext)
 loadAppWith parseExt = do
   loadEnvFrom ".env.asana"
-  appApiAccessKey <- T.pack <$> getEnv "ASANA_API_KEY"
-  (appLogLevel, appExt) <-
+  (logSettings, appAsanaAccessKey, appExt) <- loadSettings parseExt
+  appLogger <- newLogger logSettings
+
+  pure App { .. }
+
+loadSettings
+  :: forall ext . Parser ext -> IO (LogSettings, AsanaAccessKey, ext)
+loadSettings parseExt = do
+  (mLogLevel, appExt) <-
     execParser $ info (helper <*> optParser) $ fullDesc <> progDesc
       "Report information about an iteration project"
-  let logFunc = error "not initialized"
-  pure App { .. }
- where
-  optParser :: Parser (LogLevel, ext)
-  optParser =
-    resolveLevel
-      <$> flag Nothing (Just LevelDebug) (long "debug")
-      <*> flag Nothing (Just LevelWarn) (long "quiet")
-      <*> parseExt
 
-  resolveLevel debug quiet ext = (fromMaybe LevelInfo $ quiet <|> debug, ext)
+  (accessKey, envLogLevels, logDestination, logFormat) <- Env.parse id envParser
+
+  let
+    logLevels = maybe envLogLevels (`newLogLevels` []) mLogLevel
+    logSettings =
+      setLogSettingsLevels logLevels
+        . setLogSettingsDestination logDestination
+        . setLogSettingsFormat logFormat
+        $ defaultLogSettings
+
+  pure (logSettings, accessKey, appExt)
+ where
+  envParser
+    :: Env.Parser
+         Env.Error
+         (AsanaAccessKey, LogLevels, LogDestination, LogFormat)
+  envParser =
+    (,,,)
+      <$> (AsanaAccessKey <$> Env.var Env.nonempty "ASANA_API_KEY" mempty)
+      <*> Env.var
+            (first Env.unread . readLogLevels)
+            "LOG_LEVEL"
+            (Env.def defaultLogLevels)
+      <*> Env.var
+            (first Env.unread . readLogDestination)
+            "LOG_DESTINATION"
+            (Env.def LogDestinationStderr)
+      <*> Env.var
+            (first Env.unread . readLogFormat)
+            "LOG_FORMAT"
+            (Env.def LogFormatTerminal)
+
+  optParser :: Parser (Maybe LogLevel, ext)
+  optParser =
+    (,)
+      <$> (flag Nothing (Just LevelDebug) (long "debug")
+          <|> flag Nothing (Just LevelWarn) (long "quiet")
+          )
+      <*> parseExt
 
 parseIgnoreNoCanDo :: Parser Bool
 parseIgnoreNoCanDo = flag False True (long "ignore-no-can-do")
