@@ -1,15 +1,23 @@
 module Main (main) where
 
-import RIO
+import Asana.Prelude hiding ((.=))
 
-import Asana.Api
+import Asana.Api.CustomField
 import Asana.Api.Gid
+import Asana.Api.Named
+import Asana.Api.Request
+import Asana.Api.Task
 import Asana.App
+import qualified Asana.Prelude as Logging ((.=))
+import Control.Applicative ((<|>))
+import qualified Data.ByteString.Lazy as BSL
 import Data.Csv
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
+import Data.String (fromString)
 import qualified Data.Text
-import qualified RIO.ByteString.Lazy as RBSL
-import qualified RIO.HashMap as HashMap
-import qualified RIO.Text as T
+import qualified Data.Text as T
+import UnliftIO.Async (pooledForConcurrentlyN)
 
 data AppExt = AppExt
   { appProjectId :: Gid
@@ -40,7 +48,7 @@ exportProjectTasks projectId teamProjectId = do
       <$ guard (AsanaReference teamProjectId `elem` tProjects)
 
   liftIO
-    . RBSL.writeFile "planning-poker-export.csv"
+    . BSL.writeFile "planning-poker-export.csv"
     $ encodeDefaultOrderedByName planningPokerTasks
 
   for_ planningPokerTasks $ \task -> logInfo $ planningPokerTaskLog
@@ -50,7 +58,7 @@ exportProjectTasks projectId teamProjectId = do
 
 importProjectTasksFromFile :: FilePath -> Gid -> AppM AppExt ()
 importProjectTasksFromFile file projectId = do
-  contents <- RBSL.readFile file
+  contents <- liftIO $ BSL.readFile file
   case decodeByName contents of
     Left err -> logError $ fromString err
     Right (_, tasks) -> do
@@ -92,18 +100,12 @@ updatePlanningPokerTaskCost projectTaskMap task = case storyPoints task of
         "No 'cost' field.  Skipping import."
 
 planningPokerTaskLog
-  :: (PlanningPokerTask -> Text) -> PlanningPokerTask -> T.Text -> Utf8Builder
+  :: (PlanningPokerTask -> Text) -> PlanningPokerTask -> T.Text -> Message
 planningPokerTaskLog format task message =
-  fromText
-    $ "Task \""
-    <> format task
-    <> "\" <"
-    <> planningPokerTaskUrl task
-    <> ">: "
-    <> message
-
-fromText :: Text -> Utf8Builder
-fromText = fromString . T.unpack
+  message
+    :# [ "task" Logging..= format task
+       , "url" Logging..= planningPokerTaskUrl task
+       ]
 
 data PlanningPokerTask = PlanningPokerTask
   { issueKey :: Gid

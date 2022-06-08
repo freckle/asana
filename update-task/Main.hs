@@ -1,12 +1,12 @@
 module Main (main) where
 
-import RIO hiding (Set)
+import Asana.Prelude
 
-import Asana.Api
+import Asana.Api.CustomField
 import Asana.Api.Gid
+import Asana.Api.Task
 import Asana.App
 import Data.List (find)
-import Data.Text (pack, unpack)
 import qualified Data.Text as T
 import Options.Applicative
 
@@ -22,9 +22,9 @@ main = do
       oSets
 
 data Options = Options
-    { oSets :: [Set]
-    , oTaskId :: Gid
-    }
+  { oSets :: [Set]
+  , oTaskId :: Gid
+  }
 
 parseOptions :: Parser Options
 parseOptions =

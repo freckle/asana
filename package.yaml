@@ -1,5 +1,4 @@
----
-name: asana
+name: asana-cli
 
 dependencies:
   - base
@@ -33,14 +32,19 @@ default-extensions:
 library:
   source-dirs: library
   dependencies:
-    - aeson
-    - aeson-casing
-    - http-conduit
-    - iso8601-time
+    - Blammo
+    - asana
+    - bytestring
+    - envparse
+    - lens
     - load-env
+    - mtl
     - optparse-applicative
-    - rio
     - scientific
+    - text
+    - time
+    - unliftio
+    - unliftio-core
 
 executables:
   bug-reproduction:
@@ -48,52 +52,65 @@ executables:
     source-dirs: bug-reproduction
     dependencies:
       - asana
-      - rio
+      - asana-cli
       - semigroups
+      - time
   close-iteration:
     main: Main.hs
     source-dirs: close-iteration
     dependencies:
       - asana
-      - rio
+      - asana-cli
       - semigroups
+      - text
+      - unliftio
   start-iteration:
     main: Main.hs
     source-dirs: start-iteration
     dependencies:
       - asana
-      - rio
+      - asana-cli
+      - text
       - transformers
+      - unliftio
   debt-evaluation:
     main: Main.hs
     source-dirs: debt-evaluation
     dependencies:
       - asana
-      - rio
+      - asana-cli
+      - unliftio
   cycle-time:
     main: Main.hs
     source-dirs: cycle-time
     dependencies:
       - asana
+      - asana-cli
+      - bytestring
       - cassava
       - containers
-      - rio
       - statistics
       - temporary
+      - text
+      - time
+      - unliftio
       - vector
   update-task:
     main: Main.hs
     source-dirs: update-task
     dependencies:
       - asana
+      - asana-cli
       - optparse-applicative
-      - rio
       - text
   planning-poker:
     main: Main.hs
     source-dirs: planning-poker
     dependencies:
       - asana
-      - rio
-      - text
+      - asana-cli
+      - bytestring
       - cassava
+      - text
+      - unliftio
+      - unordered-containers

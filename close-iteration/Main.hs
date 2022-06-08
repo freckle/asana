@@ -1,15 +1,20 @@
 {-# LANGUAGE NamedFieldPuns #-}
+
 module Main (main) where
 
-import RIO
+import Asana.Prelude
 
-import Asana.Api
+import Asana.Api.CustomField
 import Asana.Api.Gid (Gid)
+import Asana.Api.Named
+import Asana.Api.Request
+import Asana.Api.Task
 import Asana.App
 import Asana.Story
 import Data.Semigroup (Sum(..))
 import Data.Semigroup.Generic (gmappend, gmempty)
-import qualified RIO.Text as T
+import qualified Data.Text as T
+import UnliftIO.Async (pooledForConcurrentlyN, pooledForConcurrentlyN_)
 
 data AppExt = AppExt
   { appProjectId :: Gid
@@ -40,10 +45,9 @@ main = do
     stories <- fmap catMaybes . for tasks $ \task -> do
       let mStory = fromTask (Just projectId) task
       for mStory $ \story@Story {..} -> do
-        let
-          url = "<" <> storyUrl projectId story <> ">"
-          status = "(" <> getStoryStatus story <> ")"
-        logInfo . display $ sName <> " " <> url <> " " <> status
+        let url = storyUrl projectId story
+
+        logInfo $ sName :# ["url" .= url, "status" .= getStoryStatus story]
 
         let
           incompleteNoCarry =
@@ -53,13 +57,13 @@ main = do
 
         when incompleteNoCarry
           $ logWarn
-          $ "No carry over on incomplete story: "
-          <> display url
+          $ "No carry over on incomplete story"
+          :# ["url" .= url]
 
         when doubleCarry
           $ logError
-          $ "Story is going to carry twice: "
-          <> display url
+          $ "Story is going to carry twice"
+          :# ["url" .= url]
 
         pure story
 
@@ -67,13 +71,11 @@ main = do
       capitalizedStats = statStories $ filter sCapitalized stories
       fullStats = statStories stories
 
-    hPutBuilder stdout $ getUtf8Builder $ foldMap
+    liftIO $ putStrLn $ foldMap
       ("\n" <>)
       [ "Capitalized"
-      , "- "
-      <> display (getSum $ completed capitalizedStats)
-      <> " / "
-      <> display (getSum $ completed fullStats)
+      , "- " <> show (getSum $ completed capitalizedStats) <> " / " <> show
+        (getSum $ completed fullStats)
       ]
     printStats fullStats
 
@@ -99,49 +101,43 @@ updateCompletedPoints projectId tasks =
     for_ mStory $ \story -> case getCompletedPoints story of
       Nothing ->
         logWarn
-          . display
-          $ "Could not update 'points completed' for story <"
-          <> storyUrl projectId story
-          <> ">"
+          $ "Could not update 'points completed'"
+          :# ["url" .= storyUrl projectId story]
       Just completedPoints -> do
         let mPointsCompletedField = extractNumberField "points completed" task
         case mPointsCompletedField of
           Nothing ->
             logWarn
-              . display
-              $ "No 'points completed' field for story "
-              <> storyUrl projectId story
-              <> ">. Skipping."
+              $ "Skipping due to no 'points completed' field"
+              :# ["url" .= storyUrl projectId story]
           Just pointsCompletedField -> case pointsCompletedField of
             CustomNumber gid t _ -> do
               putCustomField
                 (tGid task)
                 (CustomNumber gid t (Just $ fromInteger completedPoints))
               logInfo
-                . display
-                $ "Updated 'points completed' for story "
-                <> display (storyUrl projectId story)
-                <> " to "
-                <> display completedPoints
+                $ "Updated 'points completed'"
+                :# [ "url" .= storyUrl projectId story
+                   , "points" .= completedPoints
+                   ]
             _ -> error "impossible"
 
 printStats :: MonadIO m => CompletionStats -> m ()
-printStats stats@CompletionStats {..} =
-  hPutBuilder stdout $ getUtf8Builder $ foldMap
-    ("\n" <>)
-    [ "Completed Task Stats"
-    , "- new points: " <> display (getSum completedNewCost)
-    , "- carried over points: " <> display (getSum completedCarryOver)
-    , "- new stories: " <> display (getSum completedNewCount)
-    , "- carried over stories: " <> display (getSum carriedCount)
-    , "Incomplete Task Stats"
-    , "- points completed: " <> display (getSum incompleteCompletedPoints)
-    , "- carry over points: " <> display (getSum incompleteCarryOver)
-    , "- carry over stories: " <> display (getSum incompleteCount)
-    , ""
-    , display (getSum $ completed stats) <> " / " <> display (getSum commitment)
-    , "\n"
-    ]
+printStats stats@CompletionStats {..} = liftIO $ putStrLn $ foldMap
+  ("\n" <>)
+  [ "Completed Task Stats"
+  , "- new points: " <> show (getSum completedNewCost)
+  , "- carried over points: " <> show (getSum completedCarryOver)
+  , "- new stories: " <> show (getSum completedNewCount)
+  , "- carried over stories: " <> show (getSum carriedCount)
+  , "Incomplete Task Stats"
+  , "- points completed: " <> show (getSum incompleteCompletedPoints)
+  , "- carry over points: " <> show (getSum incompleteCarryOver)
+  , "- carry over stories: " <> show (getSum incompleteCount)
+  , ""
+  , show (getSum $ completed stats) <> " / " <> show (getSum commitment)
+  , "\n"
+  ]
 
 completed :: CompletionStats -> Sum Integer
 completed CompletionStats {..} =

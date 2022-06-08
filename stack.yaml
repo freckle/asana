@@ -1,6 +1,5 @@
 resolver: lts-19.1
-packages:
-- .
+
 # NB. -fignore-optim-changes can get in the way of profiling projects. To
 # build for profiling, consider using a separate .stack-work directory or
 # reversing the flag using `fno-ignore-optim-changes`.
@@ -25,3 +24,11 @@ ghc-options:
     -Wno-missing-safe-haskell-mode
     -Wno-prepositive-qualified-module
     -fignore-optim-changes
+
+extra-deps:
+  - Blammo-1.0.1.1
+  - asana-1.0.0.0
+
+  # Transitives for Blammo
+  - monad-logger-aeson-0.2.0.1
+  - context-0.2.0.0
