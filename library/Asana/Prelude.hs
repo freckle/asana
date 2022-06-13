@@ -24,4 +24,4 @@ import UnliftIO.Exception as X (Exception(..), catch, throwIO)
 tshow :: Show a => a -> Text
 tshow = pack . show
 
-{-# ANN module ("HLint: avoid restricted qualification" :: String) #-}
+{-# ANN module ("HLint: ignore Avoid restricted qualification" :: String) #-}
