@@ -95,6 +95,23 @@ executables:
       - time
       - unliftio
       - vector
+  educator-zombie-tasks:
+    main: Main.hs
+    source-dirs: educator-zombie-tasks
+    dependencies:
+      - aeson
+      - aeson-casing
+      - asana
+      - asana-cli
+      - hashable
+      - http-conduit
+      - scientific
+      - statistics
+      - text
+      - time
+      - unliftio
+      - unordered-containers
+      - vector
   update-task:
     main: Main.hs
     source-dirs: update-task
