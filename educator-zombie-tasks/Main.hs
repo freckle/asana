@@ -19,9 +19,9 @@ import Asana.App (AppM, loadAppWith, runApp)
 import Data.Aeson
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import Data.Bifunctor (bimap)
+import Data.Hashable (Hashable(..))
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.HashSet as HashSet
-import Data.Hashable (Hashable(..))
 import Data.List (find, nub)
 import Data.Scientific (Scientific)
 import Data.String (fromString)
