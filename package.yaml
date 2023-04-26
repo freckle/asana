@@ -105,6 +105,7 @@ executables:
       - asana-cli
       - http-conduit
       - scientific
+      - shakespeare
       - statistics
       - text
       - time

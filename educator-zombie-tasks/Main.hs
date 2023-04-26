@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TupleSections #-}
 
 -- | A tool for finding tasks that are taking longer than average
@@ -27,6 +28,7 @@ import qualified Data.Vector as V
 import Network.HTTP.Simple (JSONException)
 import Numeric.Natural
 import Statistics.Sample (mean)
+import Text.Shakespeare.Text
 import UnliftIO.Async (pooledForConcurrentlyN)
 import UnliftIO.Exception (throwString)
 
@@ -159,6 +161,27 @@ main = do
                , "assignee" .= fmap arGid sAssignee
                , "project" .= fmap arGid sProject
                ]
+
+    -- Write summary to STDOUT as markdown for integrations
+    liftIO $ putStrLn $ case zombieTasks of
+      [] -> "No zombie tasks! :face_with_cowboy_hat:"
+      _ -> summarizeInMarkdown zombieTasks
+
+summarizeInMarkdown :: [ZombieSummary] -> String
+summarizeInMarkdown zombies = unpack [st|Found #{nZombies} :zombie:
+#{intercalate "\n" $ summarize <$> zombies}
+|]
+ where
+  nZombies = case length zombies of
+    1 -> "a Zombie"
+    n -> [st|#{n} Zombies|]
+
+  summarize ZombieSummary { zombieTask = WipTask { wipName, wipGid }, daysWip, averageDaysForPoints }
+    = [st|  - #{wipName} | #{nDays $ daysWip - averageDaysForPoints} past point average | #{gidToText wipGid} |]
+
+  nDays = \case
+    1 -> "1 day"
+    n -> [st|#{n} days|]
 
 -- | Figure out (rough) start time for the task from its "stories"
 --

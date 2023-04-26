@@ -263,6 +263,7 @@ executable educator-zombie-tasks
     , base
     , http-conduit
     , scientific
+    , shakespeare
     , statistics
     , text
     , time
