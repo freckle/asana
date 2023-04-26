@@ -261,7 +261,6 @@ executable educator-zombie-tasks
     , asana
     , asana-cli
     , base
-    , hashable
     , http-conduit
     , scientific
     , statistics

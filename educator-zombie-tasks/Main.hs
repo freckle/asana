@@ -1,7 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TupleSections #-}
--- TODO upstream orphan
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | A tool for finding tasks that are taking longer than average
 module Main (main) where
@@ -20,8 +18,6 @@ import Data.Aeson
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import Data.Bifunctor (bimap)
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.HashSet as HashSet
-import Data.Hashable (Hashable(..))
 import Data.List (find, nub)
 import Data.Scientific (Scientific)
 import Data.String (fromString)
@@ -92,16 +88,16 @@ main = do
       $ \taskId -> fmap (taskId, ) <$> getTaskStories taskId
 
     -- Assume ics are the assignees of the iteration tasks
-    let ics = HashSet.fromList $ catMaybes $ tAssignee <$> allIterationTasks
+    let ics = nub $ catMaybes $ tAssignee <$> allIterationTasks
 
     let
       -- For historical data
       doneTasks =
-        mapMaybe (parseDoneTask ics iterations taskStories) allIterationTasks
+        mapMaybe (parseDoneTask iterations taskStories) allIterationTasks
 
-      -- Potential current zombies
+      -- Potential zombies
       wipTasks =
-        mapMaybe (parseWipTask ics iterations taskStories) allIterationTasks
+        mapMaybe (parseWipTask iterations taskStories) allIterationTasks
 
     logInfo
       $ "Relevant tasks"
@@ -109,8 +105,7 @@ main = do
          , "tasksWithStories" .= HashMap.size taskStories
          , "doneTasksInIterations" .= length doneTasks
          , "wipTasksInIterations" .= length wipTasks
-         , "icsInIterations"
-           .= intercalate ", " (HashSet.toList $ HashSet.map nName ics)
+         , "icsInIterations" .= intercalate ", " (nName <$> ics)
          ]
 
     for_ doneTasks $ \task -> do
@@ -165,31 +160,24 @@ main = do
                , "project" .= fmap arGid sProject
                ]
 
--- TODO upstream orphan
-instance Hashable Named where
-  hashWithSalt s Named {..} = hashWithSalt s nGid
-  hash Named {..} = hash nGid
-
 -- | Figure out (rough) start time for the task from its "stories"
 --
 -- This is the tricky bit... Let's consider a story started, the first time it's
---   * Moved into an actual iteration, or
---   * Assigned to an IC
+-- moved into an actual iteration.
 --
 parseRoughStartStory
   :: (Functor t1, Foldable t1, Foldable t2)
-  => HashSet.HashSet Named
-  -> t1 EducatorIteration
+  => t1 EducatorIteration
   -> t2 AsanaStory
   -> Maybe AsanaStory
-parseRoughStartStory ics iterations taskStories = find
+parseRoughStartStory iterations taskStories = find
   parseTypicalIndicatorOfTaskStart
   taskStories
  where
   parseTypicalIndicatorOfTaskStart AsanaStory {..} = case sResourceSubtype of
     AddedToProject ->
       any ((`elem` fmap iterationProjectGid iterations) . arGid) sProject
-    Assigned -> any ((`HashSet.member` HashSet.map nGid ics) . arGid) sAssignee
+    Assigned -> False
     Don'tCare -> False
 
 -- | "Completed" task
@@ -206,21 +194,17 @@ timeToComplete DoneTask { doneAt, doneConsideredStartedBecause = AsanaStory { sC
 
 parseDoneTask
   :: (Functor t1, Foldable t1, Foldable t2)
-  => HashSet.HashSet Named
-  -> t1 EducatorIteration
+  => t1 EducatorIteration
   -> HashMap.HashMap Gid (t2 AsanaStory)
   -> Task
   -> Maybe DoneTask
-parseDoneTask ics iterations taskStoriesLookup Task { tCompleted, tCompletedAt, tCustomFields, tGid }
+parseDoneTask iterations taskStoriesLookup Task { tCompleted, tCompletedAt, tCustomFields, tGid }
   = do
     guard tCompleted
     doneAt <- tCompletedAt
     doneCost <- parseCostFromCustomFields tCustomFields
     taskStories <- HashMap.lookup tGid taskStoriesLookup
-    doneConsideredStartedBecause <- parseRoughStartStory
-      ics
-      iterations
-      taskStories
+    doneConsideredStartedBecause <- parseRoughStartStory iterations taskStories
     pure DoneTask { doneAt, doneCost, doneConsideredStartedBecause }
 
 parseCostFromCustomFields :: CustomFields -> Maybe Scientific
@@ -245,20 +229,16 @@ data WipTask = WipTask
 
 parseWipTask
   :: (Functor t1, Foldable t1, Foldable t2)
-  => HashSet.HashSet Named
-  -> t1 EducatorIteration
+  => t1 EducatorIteration
   -> HashMap.HashMap Gid (t2 AsanaStory)
   -> Task
   -> Maybe WipTask
-parseWipTask ics iterations taskStoriesLookup Task { tName, tCompleted, tCustomFields, tGid }
+parseWipTask iterations taskStoriesLookup Task { tName, tCompleted, tCustomFields, tGid }
   = do
     guard $ not tCompleted
     wipTotalCost <- parseCostFromCustomFields tCustomFields
     taskStories <- HashMap.lookup tGid taskStoriesLookup
-    wipConsideredStartedBecause <- parseRoughStartStory
-      ics
-      iterations
-      taskStories
+    wipConsideredStartedBecause <- parseRoughStartStory iterations taskStories
     pure WipTask { wipTotalCost, wipConsideredStartedBecause, wipName, wipGid }
 
  where

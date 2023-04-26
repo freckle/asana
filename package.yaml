@@ -103,7 +103,6 @@ executables:
       - aeson-casing
       - asana
       - asana-cli
-      - hashable
       - http-conduit
       - scientific
       - statistics
