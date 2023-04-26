@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -222,6 +222,53 @@ executable debt-evaluation
     , asana-cli
     , base
     , unliftio
+  default-language: Haskell2010
+
+executable educator-zombie-tasks
+  main-is: Main.hs
+  other-modules:
+      Paths_asana_cli
+  hs-source-dirs:
+      educator-zombie-tasks
+  default-extensions:
+      BangPatterns
+      DataKinds
+      DeriveAnyClass
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      DerivingStrategies
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      NoImplicitPrelude
+      NoMonomorphismRestriction
+      OverloadedStrings
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+  build-depends:
+      aeson
+    , aeson-casing
+    , asana
+    , asana-cli
+    , base
+    , http-conduit
+    , scientific
+    , statistics
+    , text
+    , time
+    , unliftio
+    , unordered-containers
+    , vector
   default-language: Haskell2010
 
 executable planning-poker
